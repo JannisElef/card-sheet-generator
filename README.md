@@ -1,5 +1,4 @@
-# Template Project
+# Card Cropper
 
-This is a template for a project.
+Tool for editing scanned boardgame cards, enhancing image attributes like color and cropping each card into their own file.
 
-This README.md is hosted on [it's own GitHub Repository.](https://github.com/JannisElef/project-template)
