@@ -2,22 +2,28 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Card Grid Splitter</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-        body { font-family:'Inter',system-ui,sans-serif; overflow:hidden; }
+        body { font-family:'Inter',system-ui,sans-serif; }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
 
         .preview-wrapper {
-            width:100%; max-width:1050px; height:100%;
+            width:100%; height:100%;
             background: repeating-conic-gradient(#334155 0% 25%,#1e293b 0% 50%) 0 0/20px 20px;
             border-radius:16px;
             overflow:hidden;
             box-shadow:0 25px 50px -12px rgb(0 0 0/.45);
             position:relative;
             cursor:grab;
+            touch-action: none;
         }
         #preview-canvas {
             image-rendering:crisp-edges;
@@ -47,43 +53,116 @@
         }
         .rot-btn:hover { background:#475569; }
         input[type=range] { height:4px; }
+
+        /* ── Mobile sidebar drawer ── */
+        #sidebar {
+            position: fixed;
+            top: 0; left: 0;
+            width: 300px;
+            max-width: 85vw;
+            height: 100%;
+            z-index: 200;
+            transform: translateX(-100%);
+            transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+            overflow-y: auto;
+        }
+        #sidebar.open { transform: translateX(0); }
+        #sidebar-backdrop {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 199;
+        }
+        #sidebar-backdrop.open { display: block; }
+
+        /* Desktop: sidebar always visible */
+        @media (min-width: 768px) {
+            #sidebar {
+                position: relative;
+                transform: translateX(0) !important;
+                width: 300px;
+                flex-shrink: 0;
+                z-index: auto;
+            }
+            #sidebar-backdrop { display: none !important; }
+            #sidebar-toggle { display: none !important; }
+        }
+
+        /* ── Toolbar top bar scrolls on small screens ── */
+        #toolbar-bar {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        #toolbar-bar::-webkit-scrollbar { display: none; }
+        .toolbar-inner { min-width: max-content; }
+
+        /* ── tiles container ── */
+        @media (max-width: 767px) {
+            #tiles-panel { max-height: 160px; }
+        }
+
+        /* ── section collapsibles ── */
+        .section-body { overflow: hidden; transition: max-height 0.22s ease; }
+        .section-toggle-icon { transition: transform 0.2s; }
+        .section-collapsed .section-toggle-icon { transform: rotate(-90deg); }
+        .section-collapsed .section-body { max-height: 0 !important; }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-200">
-<div style="display:flex; flex-direction:column; height:100vh;">
+<body class="bg-slate-950 text-slate-200" style="height:100dvh; display:flex; flex-direction:column; overflow:hidden;">
 
-    <div class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between flex-shrink-0 z-50">
-        <div class="flex items-center gap-3">
-            <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-xl">🃏</div>
-            <h1 class="text-xl font-semibold">Card Grid Splitter</h1>
-        </div>
-        <button onclick="exportToZIP()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 rounded-2xl font-semibold flex items-center gap-2 text-sm">
-            📦 Download ZIP
-            <span id="selected-count" class="bg-white/20 px-3 py-0.5 rounded-xl text-xs">0 Cards</span>
+<!-- ══ TOP HEADER ══════════════════════════════════════════════ -->
+<div class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between flex-shrink-0 z-50 gap-2">
+    <div class="flex items-center gap-2">
+        <!-- Hamburger (mobile only) -->
+        <button id="sidebar-toggle" onclick="toggleSidebar()"
+                class="w-9 h-9 flex flex-col items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl flex-shrink-0 transition-colors"
+                title="Settings">
+            <span class="w-5 h-0.5 bg-slate-300 rounded"></span>
+            <span class="w-5 h-0.5 bg-slate-300 rounded"></span>
+            <span class="w-5 h-0.5 bg-slate-300 rounded"></span>
         </button>
+        <div class="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center text-lg flex-shrink-0">🃏</div>
+        <h1 class="text-base font-semibold whitespace-nowrap">Card Grid Splitter</h1>
     </div>
+    <button onclick="exportToZIP()" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded-2xl font-semibold flex items-center gap-2 text-xs flex-shrink-0 whitespace-nowrap">
+        📦 Download ZIP
+        <span id="selected-count" class="bg-white/20 px-2 py-0.5 rounded-xl text-xs">0 Cards</span>
+    </button>
+</div>
 
-    <div style="display:flex; flex:1; min-height:0;">
+<!-- ══ BODY ════════════════════════════════════════════════════ -->
+<div style="flex:1; display:flex; min-height:0; position:relative;">
 
-        <div style="width:320px; flex-shrink:0; overflow-y:auto;" class="bg-slate-900 border-r border-slate-800 p-4 space-y-5">
+    <!-- ── Backdrop (mobile) ── -->
+    <div id="sidebar-backdrop" onclick="closeSidebar()"></div>
 
-            <div id="upload-box" onclick="document.getElementById('file-upload').click()"
-                 class="border-2 border-dashed border-slate-600 hover:border-blue-400 rounded-2xl p-6 text-center cursor-pointer transition-colors">
-                <div class="text-5xl mb-2">📸</div>
-                <div class="text-sm font-medium">Upload Image<br><span class="text-slate-400 text-xs">Click or Drag &amp; Drop</span></div>
-                <input type="file" id="file-upload" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
-            </div>
+    <!-- ══ SIDEBAR ═══════════════════════════════════════════════ -->
+    <div id="sidebar" class="bg-slate-900 border-r border-slate-800 p-3 space-y-3">
 
-            <div>
-                <label class="block text-xs text-slate-400 mb-1">Set Prefix</label>
-                <input id="prefix-input" type="text" value="MyCardSet"
-                       class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm"
-                       oninput="currentPrefix=this.value">
-            </div>
+        <!-- Upload -->
+        <div id="upload-box" onclick="document.getElementById('file-upload').click()"
+             class="border-2 border-dashed border-slate-600 hover:border-blue-400 rounded-2xl p-5 text-center cursor-pointer transition-colors">
+            <div class="text-4xl mb-1">📸</div>
+            <div class="text-sm font-medium">Upload Image<br><span class="text-slate-400 text-xs">Click or Drag &amp; Drop</span></div>
+            <input type="file" id="file-upload" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+        </div>
 
-            <div>
-                <div class="text-xs uppercase tracking-widest text-slate-400 mb-2">Crop (%)</div>
-                <div class="grid grid-cols-2 gap-2">
+        <!-- Prefix -->
+        <div>
+            <label class="block text-xs text-slate-400 mb-1">Set Prefix</label>
+            <input id="prefix-input" type="text" value="MyCardSet"
+                   class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm"
+                   oninput="currentPrefix=this.value">
+        </div>
+
+        <!-- ── Crop ── -->
+        <div class="section-wrap">
+            <button class="section-header w-full flex items-center justify-between text-xs uppercase tracking-widest text-slate-400 mb-1 py-0.5" onclick="toggleSection(this)">
+                <span>Crop (%)</span><span class="section-toggle-icon text-slate-500">▾</span>
+            </button>
+            <div class="section-body" style="max-height:300px">
+                <div class="grid grid-cols-2 gap-2 pt-1">
                     <div>
                         <label class="text-xs text-slate-400">Left</label>
                         <div class="flex gap-1 items-center mt-0.5">
@@ -118,39 +197,49 @@
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div>
-                <div class="flex items-center justify-between mb-2">
-                    <div class="text-xs uppercase tracking-widest text-slate-400">Image Settings</div>
-                    <button onclick="resetImageParams()" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-[10px] font-semibold text-slate-200 transition-colors">Reset Values</button>
-                </div>
-                <div class="space-y-2">
+        <!-- ── Image Settings ── -->
+        <div class="section-wrap">
+            <div class="flex items-center justify-between mb-1">
+                <button class="section-header flex items-center gap-2 text-xs uppercase tracking-widest text-slate-400 py-0.5" onclick="toggleSection(this.closest('.section-wrap').querySelector('.section-header'))">
+                    <span>Image Settings</span><span class="section-toggle-icon text-slate-500">▾</span>
+                </button>
+                <button onclick="resetImageParams()" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-[10px] font-semibold text-slate-200 transition-colors">Reset</button>
+            </div>
+            <div class="section-body" style="max-height:200px">
+                <div class="space-y-2 pt-1">
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-slate-400 w-18">Brightness</span>
+                        <span class="text-xs text-slate-400" style="min-width:60px">Brightness</span>
                         <input type="range" id="brightness" min="0" max="200" value="100" oninput="syncNum('brightness');liveUpdate()" class="flex-1 accent-emerald-500">
                         <input type="number" id="brightness-num" value="100" min="0" max="200" class="w-12 bg-slate-800 border border-slate-700 rounded-lg px-1 py-1 text-center text-xs" oninput="updateFromNumber('brightness')">
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-slate-400 w-18">Contrast</span>
+                        <span class="text-xs text-slate-400" style="min-width:60px">Contrast</span>
                         <input type="range" id="contrast" min="0" max="200" value="100" oninput="syncNum('contrast');liveUpdate()" class="flex-1 accent-emerald-500">
                         <input type="number" id="contrast-num" value="100" min="0" max="200" class="w-12 bg-slate-800 border border-slate-700 rounded-lg px-1 py-1 text-center text-xs" oninput="updateFromNumber('contrast')">
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-slate-400 w-18">Saturation</span>
+                        <span class="text-xs text-slate-400" style="min-width:60px">Saturation</span>
                         <input type="range" id="saturation" min="0" max="200" value="100" oninput="syncNum('saturation');liveUpdate()" class="flex-1 accent-emerald-500">
                         <input type="number" id="saturation-num" value="100" min="0" max="200" class="w-12 bg-slate-800 border border-slate-700 rounded-lg px-1 py-1 text-center text-xs" oninput="updateFromNumber('saturation')">
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-slate-400 w-18">Hue</span>
+                        <span class="text-xs text-slate-400" style="min-width:60px">Hue</span>
                         <input type="range" id="hue" min="-180" max="180" value="0" oninput="syncNum('hue');liveUpdate()" class="flex-1 accent-emerald-500">
                         <input type="number" id="hue-num" value="0" min="-180" max="180" class="w-12 bg-slate-800 border border-slate-700 rounded-lg px-1 py-1 text-center text-xs" oninput="updateFromNumber('hue')">
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div>
-                <div class="text-xs uppercase tracking-widest text-slate-400 mb-2">Card Size &amp; Corners</div>
-                <div class="space-y-2">
+        <!-- ── Card Size ── -->
+        <div class="section-wrap">
+            <button class="section-header w-full flex items-center justify-between text-xs uppercase tracking-widest text-slate-400 mb-1 py-0.5" onclick="toggleSection(this)">
+                <span>Card Size &amp; Corners</span><span class="section-toggle-icon text-slate-500">▾</span>
+            </button>
+            <div class="section-body" style="max-height:200px">
+                <div class="space-y-2 pt-1">
                     <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="text-xs text-slate-400 block mb-1">Width (mm)</label>
@@ -164,7 +253,7 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-slate-400 w-18">Radius (mm)</span>
+                        <span class="text-xs text-slate-400" style="min-width:60px">Radius (mm)</span>
                         <input type="range" id="corner-radius-mm" min="0" max="15" value="3" step="0.5"
                                oninput="syncNum('corner-radius-mm');updatePreview()" class="flex-1 accent-emerald-500">
                         <input type="number" id="corner-radius-mm-num" value="3" min="0" max="15" step="0.5"
@@ -174,12 +263,17 @@
                     <div id="radius-info" class="text-xs text-slate-600 text-right h-3"></div>
                 </div>
             </div>
+        </div>
 
-            <div>
-                <div class="text-xs uppercase tracking-widest text-slate-400 mb-2">Viewport Lines</div>
-                <div class="space-y-2">
+        <!-- ── Viewport Lines ── -->
+        <div class="section-wrap">
+            <button class="section-header w-full flex items-center justify-between text-xs uppercase tracking-widest text-slate-400 mb-1 py-0.5" onclick="toggleSection(this)">
+                <span>Viewport Lines</span><span class="section-toggle-icon text-slate-500">▾</span>
+            </button>
+            <div class="section-body" style="max-height:160px">
+                <div class="space-y-2 pt-1">
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-slate-400 w-18">Grid (px)</span>
+                        <span class="text-xs text-slate-400" style="min-width:60px">Grid (px)</span>
                         <input type="range" id="line-grid" min="0.5" max="10" value="2" step="0.5"
                                oninput="syncNum('line-grid');updatePreview()" class="flex-1 accent-red-500">
                         <input type="number" id="line-grid-num" value="2" min="0.5" max="10" step="0.5"
@@ -187,7 +281,7 @@
                                oninput="document.getElementById('line-grid').value=this.value;updatePreview()">
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-slate-400 w-18">Crop (px)</span>
+                        <span class="text-xs text-slate-400" style="min-width:60px">Crop (px)</span>
                         <input type="range" id="line-crop" min="0.5" max="10" value="3" step="0.5"
                                oninput="syncNum('line-crop');updatePreview()" class="flex-1 accent-emerald-500">
                         <input type="number" id="line-crop-num" value="3" min="0.5" max="10" step="0.5"
@@ -195,7 +289,7 @@
                                oninput="document.getElementById('line-crop').value=this.value;updatePreview()">
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-slate-400 w-18">Selection (px)</span>
+                        <span class="text-xs text-slate-400" style="min-width:60px">Selection (px)</span>
                         <input type="range" id="line-sel" min="0.5" max="10" value="2" step="0.5"
                                oninput="syncNum('line-sel');renderSelectionOverlays()" class="flex-1 accent-emerald-500">
                         <input type="number" id="line-sel-num" value="2" min="0.5" max="10" step="0.5"
@@ -204,58 +298,85 @@
                     </div>
                 </div>
             </div>
+        </div>
 
-        </div><div style="flex:1; display:flex; flex-direction:column; min-height:0; min-width:0;">
+    </div><!-- /sidebar -->
 
-            <div class="px-5 py-2.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between flex-shrink-0">
-                <div id="current-scan-name" class="font-medium text-sm truncate max-w-xs text-slate-300">No scan loaded</div>
-                <div class="flex gap-2 items-center flex-shrink-0">
-                    <div class="flex items-center gap-1 border-r border-slate-700 pr-3 mr-1">
-                        <button class="rot-btn" title="90° counter-clockwise" onclick="rotateImage(-90)">↺</button>
-                        <span id="rotation-label" class="text-xs text-slate-500 w-7 text-center">0°</span>
-                        <button class="rot-btn" title="90° clockwise" onclick="rotateImage(90)">↻</button>
-                    </div>
-                    <span class="text-slate-400 text-sm">Cols</span>
-                    <input id="cols" type="number" value="4" min="1" oninput="updateGrid()"
-                           class="w-12 bg-slate-800 text-center border border-slate-700 rounded-xl py-1.5 font-mono text-sm">
-                    <span class="text-slate-400 text-sm">Rows</span>
-                    <input id="rows" type="number" value="3" min="1" oninput="updateGrid()"
-                           class="w-12 bg-slate-800 text-center border border-slate-700 rounded-xl py-1.5 font-mono text-sm">
-                    <button onclick="selectAll()"   class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded-xl text-xs">Select All</button>
-                    <button onclick="deselectAll()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs">Deselect All</button>
-                    <button onclick="resetView()"   class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs">Auto Fit</button>
+    <!-- ══ MAIN AREA ══════════════════════════════════════════════ -->
+    <div style="flex:1; display:flex; flex-direction:column; min-height:0; min-width:0;">
+
+        <!-- ── Toolbar ── -->
+        <div id="toolbar-bar" class="bg-slate-900 border-b border-slate-800 flex-shrink-0">
+            <div class="toolbar-inner px-3 py-2 flex items-center gap-2">
+                <div id="current-scan-name" class="font-medium text-xs text-slate-300 truncate max-w-[120px] md:max-w-xs">No scan loaded</div>
+                <div class="flex items-center gap-1 border-r border-slate-700 pr-2 mr-1 flex-shrink-0">
+                    <button class="rot-btn" title="90° counter-clockwise" onclick="rotateImage(-90)">↺</button>
+                    <span id="rotation-label" class="text-xs text-slate-500 w-7 text-center">0°</span>
+                    <button class="rot-btn" title="90° clockwise" onclick="rotateImage(90)">↻</button>
+                </div>
+                <span class="text-slate-400 text-xs flex-shrink-0">Cols</span>
+                <input id="cols" type="number" value="4" min="1" oninput="updateGrid()"
+                       class="w-11 bg-slate-800 text-center border border-slate-700 rounded-xl py-1 font-mono text-sm flex-shrink-0">
+                <span class="text-slate-400 text-xs flex-shrink-0">Rows</span>
+                <input id="rows" type="number" value="3" min="1" oninput="updateGrid()"
+                       class="w-11 bg-slate-800 text-center border border-slate-700 rounded-xl py-1 font-mono text-sm flex-shrink-0">
+                <button onclick="selectAll()"   class="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded-xl text-xs flex-shrink-0 whitespace-nowrap">Select All</button>
+                <button onclick="deselectAll()" class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs flex-shrink-0 whitespace-nowrap">Deselect All</button>
+                <button onclick="resetView()"   class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs flex-shrink-0 whitespace-nowrap">Auto Fit</button>
+            </div>
+        </div>
+
+        <!-- ── Canvas Preview ── -->
+        <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:12px; background:#020617; min-height:0;">
+            <div id="preview-wrapper" class="preview-wrapper"
+                 onmousedown="startPan(event)"
+                 onwheel="zoomWithWheel(event)"
+                 ondrop="handleDrop(event)"
+                 ondragover="handleDragOver(event)"
+                 ondragleave="handleDragLeave(event)">
+                <canvas id="preview-canvas"></canvas>
+                <div id="selection-overlays"></div>
+                <div id="drop-hint" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;user-select:none;color:#475569;">
+                    <div style="font-size:56px;margin-bottom:10px;">🖼️</div>
+                    <div style="font-size:13px;font-weight:500;text-align:center;padding:0 16px;">Drop image here or tap ☰ to upload</div>
                 </div>
             </div>
+        </div>
 
-            <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:20px; background:#020617; min-height:0;">
-                <div id="preview-wrapper" class="preview-wrapper"
-                     onmousedown="startPan(event)"
-                     onwheel="zoomWithWheel(event)"
-                     ondrop="handleDrop(event)"
-                     ondragover="handleDragOver(event)"
-                     ondragleave="handleDragLeave(event)">
-                    <canvas id="preview-canvas"></canvas>
-                    <div id="selection-overlays"></div>
-                    <div id="drop-hint" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;user-select:none;color:#475569;">
-                        <div style="font-size:64px;margin-bottom:12px;">🖼️</div>
-                        <div style="font-size:15px;font-weight:500;">Drop image here or upload on the left</div>
-                    </div>
-                </div>
+        <!-- ── Card Selection Panel ── -->
+        <div id="tiles-panel" class="bg-slate-900 border-t border-slate-800 flex-shrink-0">
+            <div class="px-4 py-2 border-b border-slate-700 flex justify-between items-center">
+                <span class="text-sm font-medium">Select Cards</span>
+                <span id="tiles-count" class="text-emerald-400 font-mono text-sm">0 / 0</span>
             </div>
+            <div id="tiles-container" style="display:grid; gap:5px; padding:8px 10px; max-height:160px; overflow-y:auto;"></div>
+        </div>
 
-            <div class="bg-slate-900 border-t border-slate-800 flex-shrink-0">
-                <div class="px-5 py-2 border-b border-slate-700 flex justify-between items-center">
-                    <span class="text-sm font-medium">Select Cards</span>
-                    <span id="tiles-count" class="text-emerald-400 font-mono text-sm">0 / 0</span>
-                </div>
-                <div id="tiles-container" style="display:grid; gap:6px; padding:8px 12px; max-height: 200px; overflow-y: auto;"></div>
-            </div>
+    </div><!-- /main -->
 
-        </div></div></div><script>
+</div><!-- /body row -->
+
+<script>
     let currentScan   = null;
     let currentPrefix = 'MyCardSet';
     let zoom  = 1, panX = 0, panY = 0;
     let isPanning = false, lastX = 0, lastY = 0;
+
+    // ── Mobile sidebar toggle ─────────────────────────────────────
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sidebar-backdrop').classList.toggle('open');
+    }
+    function closeSidebar() {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebar-backdrop').classList.remove('open');
+    }
+
+    // ── Collapsible sections ──────────────────────────────────────
+    function toggleSection(btn) {
+        const wrap = btn.closest('.section-wrap') || btn.parentElement.closest('.section-wrap');
+        if (wrap) wrap.classList.toggle('section-collapsed');
+    }
 
     // ── Drag & Drop sidebar ──────────────────────────────────────
     const uploadBox = document.getElementById('upload-box');
@@ -267,7 +388,12 @@
         if (f && f.type.startsWith('image/')) processFile(f);
     });
 
-    function handleFileSelect(e) { if (e.target.files[0]) processFile(e.target.files[0]); }
+    function handleFileSelect(e) {
+        if (e.target.files[0]) {
+            processFile(e.target.files[0]);
+            closeSidebar(); // close sidebar after selecting file on mobile
+        }
+    }
     function handleDragOver(e)  { e.preventDefault(); document.getElementById('preview-wrapper').classList.add('drop-zone-active'); }
     function handleDragLeave()  { document.getElementById('preview-wrapper').classList.remove('drop-zone-active'); }
     function handleDrop(e) {
@@ -276,14 +402,53 @@
         if (f && f.type.startsWith('image/')) processFile(f);
     }
 
+    // ── Touch support: pan & pinch-zoom ──────────────────────────
+    let touchState = null;
+    const previewWrapper = document.getElementById('preview-wrapper');
+
+    previewWrapper.addEventListener('touchstart', e => {
+        if (e.touches.length === 1) {
+            touchState = { type: 'pan', x: e.touches[0].clientX, y: e.touches[0].clientY };
+        } else if (e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            touchState = { type: 'pinch', dist: Math.hypot(dx, dy), zoom };
+        }
+        e.preventDefault();
+    }, { passive: false });
+
+    previewWrapper.addEventListener('touchmove', e => {
+        if (!touchState || !currentScan) return;
+        e.preventDefault();
+        if (touchState.type === 'pan' && e.touches.length === 1) {
+            panX += e.touches[0].clientX - touchState.x;
+            panY += e.touches[0].clientY - touchState.y;
+            touchState.x = e.touches[0].clientX;
+            touchState.y = e.touches[0].clientY;
+            applyTransform();
+        } else if (touchState.type === 'pinch' && e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const newDist = Math.hypot(dx, dy);
+            const canvas = document.getElementById('preview-canvas');
+            const wrapper = document.getElementById('preview-wrapper');
+            const fitZ = Math.min(wrapper.clientWidth/canvas.width, wrapper.clientHeight/canvas.height);
+            zoom = Math.max(fitZ * 0.08, Math.min(touchState.zoom * (newDist / touchState.dist), 10));
+            applyTransform();
+        }
+    }, { passive: false });
+
+    previewWrapper.addEventListener('touchend', e => {
+        if (e.touches.length === 0) touchState = null;
+    });
+
     // ── processFile ──────────────────────────────────────────────
     function processFile(file) {
         const img = new Image();
         img.onload = () => {
-            const prev = currentScan || {}; // Save previous values for persistence
-            
+            const prev = currentScan || {};
             currentScan = {
-                name: file.name, originalImage: img, 
+                name: file.name, originalImage: img,
                 rotation: prev.rotation !== undefined ? prev.rotation : 0,
                 cols: parseInt(document.getElementById('cols').value) || 4,
                 rows: parseInt(document.getElementById('rows').value) || 3,
@@ -302,15 +467,10 @@
             document.getElementById('current-scan-name').textContent = file.name;
             document.getElementById('drop-hint').style.display = 'none';
             syncAllControls();
-            
-            // Prepare canvas first
             const canvas = document.getElementById('preview-canvas');
             canvas.width = img.width;
             canvas.height = img.height;
-
-            // Then reset viewport (calculates Zoom & Pan)
-            resetView(); 
-            // Then draw contents
+            resetView();
             updatePreview();
             renderTilesSelection();
         };
@@ -329,7 +489,6 @@
         currentScan.cropRight = 0;
         currentScan.cropBottom = 0;
         currentScan.rotation = 0;
-        
         syncAllControls();
         updatePreview();
         resetView();
@@ -590,7 +749,7 @@
         });
     }
 
-    // ── Zoom & Pan Fix ────────────────────────────────────────────
+    // ── Mouse Pan ─────────────────────────────────────────────────
     function startPan(e) {
         if (e.button!==0) return;
         isPanning=true; lastX=e.clientX; lastY=e.clientY;
@@ -607,6 +766,8 @@
         const w=document.getElementById('preview-wrapper');
         if (w) w.style.cursor='grab';
     });
+
+    // ── Wheel Zoom ────────────────────────────────────────────────
     function zoomWithWheel(e) {
         if (!currentScan) return;
         e.preventDefault();
@@ -614,45 +775,35 @@
         const wrapper=document.getElementById('preview-wrapper');
         const canvas =document.getElementById('preview-canvas');
         const fitZ   = Math.min(wrapper.clientWidth/canvas.width, wrapper.clientHeight/canvas.height);
-        
         const oldZoom = zoom;
         zoom = Math.max(fitZ*0.08, Math.min(zoom*factor, 10));
-
-        // Zoom to mouse position (optional, improves handling)
         const rect = wrapper.getBoundingClientRect();
         const mouseX = e.clientX - rect.left - panX;
         const mouseY = e.clientY - rect.top - panY;
         panX -= mouseX * (zoom / oldZoom - 1);
         panY -= mouseY * (zoom / oldZoom - 1);
-
         applyTransform();
     }
+
     function applyTransform() {
         const canvas = document.getElementById('preview-canvas');
         const overlays = document.getElementById('selection-overlays');
         const transformStr = `translate(${panX}px,${panY}px) scale(${zoom})`;
-        
         canvas.style.transform = transformStr;
         if (overlays) overlays.style.transform = transformStr;
-        
-        // Redraw lines to adjust for zoom
-        updatePreview(); 
+        updatePreview();
     }
+
     function resetView() {
         if (!currentScan) return;
         const wrapper = document.getElementById('preview-wrapper');
         const canvas  = document.getElementById('preview-canvas');
-        
-        // Calculate Fit-Zoom
         zoom = Math.min(
-            (wrapper.clientWidth * 0.9) / canvas.width, 
+            (wrapper.clientWidth * 0.9) / canvas.width,
             (wrapper.clientHeight * 0.9) / canvas.height
         );
-        
-        // Center image
         panX = (wrapper.clientWidth - canvas.width * zoom) / 2;
         panY = (wrapper.clientHeight - canvas.height * zoom) / 2;
-        
         applyTransform();
     }
 
@@ -678,28 +829,13 @@
         const pixelRadius = (radiusMM/(currentScan.cardWidthMM||63)) * tileW;
 
         const zip=new JSZip();
-        
-        // Text summary in the ZIP
-        let summaryText = `Export Summary\n`;
-        summaryText += `========================\n\n`;
-        summaryText += `Filename: ${currentScan.name}\n`;
-        summaryText += `Set Prefix: ${currentPrefix}\n\n`;
-        summaryText += `--- Image Parameters ---\n`;
-        summaryText += `Brightness: ${currentScan.brightness}%\n`;
-        summaryText += `Contrast: ${currentScan.contrast}%\n`;
-        summaryText += `Saturation: ${currentScan.saturation}%\n`;
-        summaryText += `Hue: ${currentScan.hue}°\n`;
-        summaryText += `Rotation: ${currentScan.rotation}°\n\n`;
-        summaryText += `--- Crop ---\n`;
-        summaryText += `Left: ${currentScan.cropLeft}%\n`;
-        summaryText += `Right: ${currentScan.cropRight}%\n`;
-        summaryText += `Top: ${currentScan.cropTop}%\n`;
-        summaryText += `Bottom: ${currentScan.cropBottom}%\n\n`;
-        summaryText += `--- Grid & Format ---\n`;
-        summaryText += `Card Format: ${currentScan.cardWidthMM}mm x ${currentScan.cardHeightMM}mm\n`;
-        summaryText += `Grid: ${currentScan.cols} Cols, ${currentScan.rows} Rows\n`;
-        summaryText += `Exported Cards: ${currentScan.selectedTiles.size}\n`;
 
+        let summaryText = `Export Summary\n========================\n\n`;
+        summaryText += `Filename: ${currentScan.name}\nSet Prefix: ${currentPrefix}\n\n`;
+        summaryText += `--- Image Parameters ---\n`;
+        summaryText += `Brightness: ${currentScan.brightness}%\nContrast: ${currentScan.contrast}%\nSaturation: ${currentScan.saturation}%\nHue: ${currentScan.hue}°\nRotation: ${currentScan.rotation}°\n\n`;
+        summaryText += `--- Crop ---\nLeft: ${currentScan.cropLeft}%\nRight: ${currentScan.cropRight}%\nTop: ${currentScan.cropTop}%\nBottom: ${currentScan.cropBottom}%\n\n`;
+        summaryText += `--- Grid & Format ---\nCard Format: ${currentScan.cardWidthMM}mm x ${currentScan.cardHeightMM}mm\nGrid: ${currentScan.cols} Cols, ${currentScan.rows} Rows\nExported Cards: ${currentScan.selectedTiles.size}\n`;
         zip.file("summary.txt", summaryText);
 
         const off=document.createElement('canvas');
@@ -736,10 +872,10 @@
         setTimeout(()=>URL.revokeObjectURL(a.href),5000);
 
         btn.disabled=false;
-        btn.innerHTML=`📦 Download ZIP <span id="selected-count" class="bg-white/20 px-3 py-0.5 rounded-xl text-xs">${currentScan.selectedTiles.size} Cards</span>`;
+        btn.innerHTML=`📦 Download ZIP <span id="selected-count" class="bg-white/20 px-2 py-0.5 rounded-xl text-xs">${currentScan.selectedTiles.size} Cards</span>`;
     }
 
-    window.onload=()=>console.log('%c✅ Card Grid Splitter Fix ready','color:#22c55e;font-weight:bold');
+    window.onload=()=>console.log('%c✅ Card Grid Splitter Mobile ready','color:#22c55e;font-weight:bold');
 </script>
 </body>
 </html>
