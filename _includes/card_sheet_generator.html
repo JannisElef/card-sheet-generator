@@ -1,6 +1,7 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Card Sheet Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -57,7 +58,7 @@
 
         /* Edit controls panel: scrollable fixed height on mobile, full on desktop */
         #edit-controls-panel{max-height:min(240px,38dvh)}
-        @media(min-width:768px){#edit-controls-panel{max-height:none;flex:1}}
+        @media(min-width:768px){#edit-controls-panel{max-height:none;flex:1;min-height:0;}}
 
         /* Review grid: each card is a fixed-size column, grid scrolls */
         #review-grid{
@@ -172,7 +173,7 @@
                         <div><label class="text-xs text-slate-400 block mb-1">Width (mm)</label><input type="number" id="card-width-mm" value="63" min="1" max="200" step="0.5" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2 py-2 text-center text-sm" oninput="updateCardSize()"></div>
                         <div><label class="text-xs text-slate-400 block mb-1">Height (mm)</label><input type="number" id="card-height-mm" value="88" min="1" max="300" step="0.5" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-2 py-2 text-center text-sm" oninput="updateCardSize()"></div>
                     </div>
-                    <div class="flex items-center gap-2"><span class="text-xs text-slate-400" style="min-width:60px">Radius (mm)</span><input type="range" id="corner-radius-mm" min="0" max="15" value="4" step="0.5" oninput="syncNum('corner-radius-mm');updatePreview()" class="flex-1 accent-emerald-500"><input type="number" id="corner-radius-mm-num" value="4" min="0" max="15" step="0.5" class="w-12 bg-slate-800 border border-slate-700 rounded-lg px-1 py-1 text-center text-xs" oninput="document.getElementById('corner-radius-mm').value=this.value;updatePreview()"></div>
+                    <div class="flex items-center gap-2"><span class="text-xs text-slate-400" style="min-width:60px">Radius (mm)</span><input type="range" id="corner-radius-mm" min="0" max="15" value="3" step="0.5" oninput="syncNum('corner-radius-mm');updatePreview()" class="flex-1 accent-emerald-500"><input type="number" id="corner-radius-mm-num" value="3" min="0" max="15" step="0.5" class="w-12 bg-slate-800 border border-slate-700 rounded-lg px-1 py-1 text-center text-xs" oninput="document.getElementById('corner-radius-mm').value=this.value;updatePreview()"></div>
                     <div id="radius-info" class="text-xs text-slate-600 text-right h-3"></div>
                 </div>
             </div>
@@ -381,7 +382,7 @@
 
 <!-- EDIT MODAL — zoom/pan canvas + pixel crop inputs -->
 <div id="edit-modal" class="modal-overlay z-[700]">
-    <div class="modal-inner" style="max-width:900px;">
+    <div class="modal-inner" style="max-width:1100px;">
         <div class="px-5 py-3 border-b border-slate-800 bg-slate-900 flex items-center justify-between flex-shrink-0">
             <div>
                 <div class="text-base font-semibold">Fine-tune Crop</div>
@@ -401,8 +402,28 @@
                 </div>
             </div>
             <!-- Controls — scrollable on mobile, full height sidebar on desktop -->
-            <div class="w-full md:w-64 bg-slate-900 flex flex-col p-4 gap-3 flex-shrink-0 overflow-y-auto md:overflow-y-auto" style="max-height:none;" id="edit-controls-panel">
-                <div class="text-xs uppercase tracking-widest text-slate-400 mb-1">Trim (px)</div>
+            <div class="w-full md:w-80 bg-slate-900 flex flex-col p-4 gap-3 flex-shrink-0 overflow-y-auto md:overflow-y-auto" style="max-height:none;" id="edit-controls-panel">
+                <!-- Rotation -->
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs uppercase tracking-widest text-slate-400">Rotation</span>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="setEditRotation(0)" class="px-2 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-xs transition-colors">0°</button>
+                            <span id="erot-val" class="text-xs text-blue-400 font-mono w-14 text-right">0.0°</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-1 items-center">
+                        <input type="range" id="e-rot" min="-45" max="45" value="0" step="0.1"
+                               oninput="updateEditRotation()" class="flex-1 accent-blue-500">
+                        <input type="number" id="e-rot-num" value="0" min="-45" max="45" step="0.1"
+                               class="w-16 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-center text-xs"
+                               oninput="updateEditRotationFromNum()">
+                    </div>
+                </div>
+
+                <hr class="border-slate-800">
+
+                <div class="text-xs uppercase tracking-widest text-slate-400">Trim (px)</div>
                 <div>
                     <div class="flex items-center justify-between mb-1"><label class="text-xs text-slate-400">Left</label><span id="el-val" class="text-xs text-slate-300 font-mono">0</span></div>
                     <div class="flex gap-1 items-center">
@@ -1078,6 +1099,24 @@ function updateEditCropRange(side){
     document.getElementById(`e-crop-${side}`).value=v;
     document.getElementById(`e${side}-val`).textContent=v+'px';
 }
+function updateEditRotation(){
+    const v=parseFloat(document.getElementById('e-rot').value)||0;
+    document.getElementById('e-rot-num').value=v;
+    document.getElementById('erot-val').textContent=v.toFixed(1)+'°';
+    updateEditCanvas();
+}
+function updateEditRotationFromNum(){
+    const v=Math.max(-45,Math.min(45,parseFloat(document.getElementById('e-rot-num').value)||0));
+    document.getElementById('e-rot').value=v;
+    document.getElementById('erot-val').textContent=v.toFixed(1)+'°';
+    updateEditCanvas();
+}
+function setEditRotation(deg){
+    document.getElementById('e-rot').value=deg;
+    document.getElementById('e-rot-num').value=deg;
+    document.getElementById('erot-val').textContent=deg.toFixed(1)+'°';
+    updateEditCanvas();
+}
 
 function openEditModal(id){
     const card=slicedCards.find(sc=>sc.id===id);if(!card)return;
@@ -1091,6 +1130,11 @@ function openEditModal(id){
         document.getElementById(key+'-num').max=maxVal;document.getElementById(key+'-num').value=card.trim[trimKey];
         document.getElementById(`e${s}-val`).textContent=card.trim[trimKey]+'px';
     });
+    // Init rotation slider
+    const rot=card.trim.rot||0;
+    document.getElementById('e-rot').value=rot;
+    document.getElementById('e-rot-num').value=rot;
+    document.getElementById('erot-val').textContent=rot.toFixed(1)+'°';
     eZoom=1;ePanX=0;ePanY=0;
     updateEditCanvas();
     document.getElementById('edit-modal').classList.add('open');
@@ -1116,14 +1160,28 @@ function updateEditCanvas(){
     const r=parseInt(document.getElementById('e-crop-r').value)||0;
     const t=parseInt(document.getElementById('e-crop-t').value)||0;
     const b=parseInt(document.getElementById('e-crop-b').value)||0;
+    const rotDeg=parseFloat(document.getElementById('e-rot').value)||0;
     const canvas=document.getElementById('edit-canvas'),ctx=canvas.getContext('2d');
     const img=new Image();
     img.onload=()=>{
         canvas.width=card.w;canvas.height=card.h;ctx.clearRect(0,0,canvas.width,canvas.height);
-        ctx.globalAlpha=0.3;ctx.drawImage(img,0,0);ctx.globalAlpha=1.0;
+        // Full image dimmed as reference
+        ctx.globalAlpha=0.3;
+        if(rotDeg!==0){
+            const cx=card.w/2,cy=card.h/2;
+            ctx.save();ctx.translate(cx,cy);ctx.rotate(rotDeg*Math.PI/180);ctx.drawImage(img,-cx,-cy);ctx.restore();
+        } else {ctx.drawImage(img,0,0);}
+        ctx.globalAlpha=1.0;
         const effW=card.w-l-r,effH=card.h-t-b;
         if(effW>0&&effH>0){
-            ctx.drawImage(img,l,t,effW,effH,l,t,effW,effH);
+            // Draw cropped+rotated region at full opacity
+            ctx.save();
+            ctx.beginPath();ctx.rect(l,t,effW,effH);ctx.clip();
+            if(rotDeg!==0){
+                const cx=card.w/2,cy=card.h/2;
+                ctx.translate(cx,cy);ctx.rotate(rotDeg*Math.PI/180);ctx.drawImage(img,-cx,-cy);
+            } else {ctx.drawImage(img,l,t,effW,effH,l,t,effW,effH);}
+            ctx.restore();
             const radiusMM=parseFloat(document.getElementById('corner-radius-mm').value)||0;
             const px=card.w/(currentScan?currentScan.cardWidthMM:63);const pr=radiusMM*px;
             ctx.strokeStyle=pr>0.5?'#22c55e':'#3b82f6';ctx.lineWidth=Math.max(2,2/eZoom);
@@ -1140,16 +1198,28 @@ function saveIndividualCrop(){
     const r=parseInt(document.getElementById('e-crop-r').value)||0;
     const t=parseInt(document.getElementById('e-crop-t').value)||0;
     const b=parseInt(document.getElementById('e-crop-b').value)||0;
+    const rotDeg=parseFloat(document.getElementById('e-rot').value)||0;
     const effW=card.w-l-r,effH=card.h-t-b;if(effW<=0||effH<=0){alert('Invalid crop dimensions');return;}
-    card.trim={l,t,r,b};
+    card.trim={l,t,r,b,rot:rotDeg};
     const img=new Image();
     img.onload=()=>{
         const off=document.createElement('canvas');off.width=effW;off.height=effH;
         const ctx=off.getContext('2d');
         const radiusMM=parseFloat(document.getElementById('corner-radius-mm').value)||0;
         const px=card.w/(currentScan?currentScan.cardWidthMM:63);const pr=radiusMM*px;
-        if(pr>0.5){ctx.save();ctx.beginPath();roundRectPath(ctx,0,0,effW,effH,pr);ctx.clip();ctx.drawImage(img,l,t,effW,effH,0,0,effW,effH);ctx.restore();}
-        else{ctx.drawImage(img,l,t,effW,effH,0,0,effW,effH);}
+
+        ctx.save();
+        if(pr>0.5){ctx.beginPath();roundRectPath(ctx,0,0,effW,effH,pr);ctx.clip();}
+        if(rotDeg!==0){
+            // Rotate around the centre of the full card, then translate to crop origin
+            const cx=card.w/2-l,cy=card.h/2-t;
+            ctx.translate(cx,cy);ctx.rotate(rotDeg*Math.PI/180);ctx.translate(-card.w/2,-card.h/2);
+            ctx.drawImage(img,0,0);
+        } else {
+            ctx.drawImage(img,l,t,effW,effH,0,0,effW,effH);
+        }
+        ctx.restore();
+
         card.dataUrl=off.toDataURL('image/png');
         renderReviewGrid();document.getElementById('edit-modal').classList.remove('open');
     };
@@ -1203,9 +1273,11 @@ async function exportReviewZIP(){
     txt+=`--- Cards ---\n`;
     slicedCards.forEach((c,i)=>{
         const hasTrim=c.trim&&(c.trim.l||c.trim.t||c.trim.r||c.trim.b);
+        const hasRot=c.trim&&c.trim.rot&&c.trim.rot!==0;
         let line=`${String(i+1).padStart(3,'0')}. ${currentPrefix}_${c.suffix}.png`;
         if((c.copies||1)>1)line+=` (×${c.copies} copies)`;
         if(hasTrim)line+=` [trim L:${c.trim.l} R:${c.trim.r} T:${c.trim.t} B:${c.trim.b}]`;
+        if(hasRot)line+=` [rot:${c.trim.rot}°]`;
         txt+=line+'\n';
     });
     zip.file('_summary.txt',txt);
@@ -1321,9 +1393,11 @@ async function generatePDF(){
         let col=0;const startSY=sy;
         slicedCards.forEach((c,i)=>{
             const hasTrim=c.trim&&(c.trim.l||c.trim.t||c.trim.r||c.trim.b);
+            const hasRot=c.trim&&c.trim.rot&&c.trim.rot!==0;
             const copies=(c.copies||1)>1?` ×${c.copies}`:'';
             const trim=hasTrim?` [L${c.trim.l} R${c.trim.r} T${c.trim.t} B${c.trim.b}]`:'';
-            const line=`${String(i+1).padStart(3,'0')}. ${currentPrefix}_${c.suffix}${copies}${trim}`;
+            const rotStr=hasRot?` rot:${c.trim.rot}°`:'';
+            const line=`${String(i+1).padStart(3,'0')}. ${currentPrefix}_${c.suffix}${copies}${trim}${rotStr}`;
             doc.setTextColor(60,60,60);doc.setFont('helvetica','normal');
             doc.text(line,m+col*colW,sy,{maxWidth:colW-4});
             sy+=4;
