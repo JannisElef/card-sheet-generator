@@ -1,7 +1,7 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Card Sheet Generator</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -32,6 +32,12 @@
         .modal-overlay.open{display:flex}
         .modal-inner{width:100%;max-width:960px;height:100%;max-height:calc(100dvh - 32px);background:#0f172a;border:1px solid #1e293b;border-radius:20px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 40px 80px -12px rgba(0,0,0,.8)}
         .modal-inner-large{max-width:1400px;flex-direction:column}
+        /* On mobile the large review modal scrolls instead of cramming everything */
+        @media(max-width:767px){
+            .modal-overlay{padding:0;align-items:flex-start;}
+            .modal-inner-large{max-height:none;height:auto;min-height:100dvh;border-radius:0;overflow-y:auto;}
+            #review-grid{overflow-y:visible;max-height:none;height:auto;}
+        }
         @media(min-width:768px){.modal-inner-large{flex-direction:row}}
 
         #sidebar{position:fixed;top:0;left:0;width:300px;max-width:85vw;height:100%;z-index:200;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);overflow-y:auto}
@@ -60,16 +66,38 @@
         #edit-controls-panel{max-height:min(240px,38dvh)}
         @media(min-width:768px){#edit-controls-panel{max-height:none;flex:1;min-height:0;}}
 
-        /* Review grid: each card is a fixed-size column, grid scrolls */
+        /* Grid drag handles overlay */
+        #grid-handles,#popup-grid-handles,#edit-crop-handles{
+            position:absolute;top:0;left:0;width:0;height:0;
+            transform-origin:0 0;pointer-events:none;z-index:35;
+        }
+        .grid-handle{
+            position:absolute;pointer-events:all;
+            background:rgba(34,197,94,.92);border:2px solid #fff;
+            border-radius:3px;cursor:default;
+            box-shadow:0 1px 5px rgba(0,0,0,.6);
+            /* counter-scale so handles are always the same pixel size in the viewport */
+            transform:translate(-50%,-50%) scale(var(--hz-inv,1));
+            transform-origin:center center;
+            transition:background .1s;
+        }
+        .grid-handle:hover{background:#16a34a;}
+        .grid-handle.edge-h{width:36px;height:8px;cursor:ns-resize;}
+        .grid-handle.edge-v{width:8px;height:36px;cursor:ew-resize;}
+        .grid-handle.corner{width:12px;height:12px;cursor:nwse-resize;border-radius:3px;}
+        .grid-handle.corner.ne,.grid-handle.corner.sw{cursor:nesw-resize;}
         #review-grid{
             display:grid;
             gap:12px;
             padding:12px;
             overflow-y:auto;
-            grid-template-columns:repeat(auto-fill,minmax(155px,1fr));
+            grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
             align-content:start;
             flex:1;
             min-height:0;
+        }
+        @media(max-width:767px){
+            #review-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));overflow-y:visible;}
         }
         .review-card{background:#0f172a;border:1px solid #334155;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .12s,box-shadow .12s;}
         .review-card:hover{border-color:#475569;}
@@ -250,6 +278,7 @@
             <div id="preview-wrapper" class="preview-wrapper" onmousedown="startPan(event)" onwheel="zoomWithWheel(event)" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
                 <canvas id="preview-canvas"></canvas>
                 <div id="selection-overlays"></div>
+                <div id="grid-handles"></div>
                 <div id="drop-hint" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;user-select:none;color:#475569;">
                     <div style="font-size:56px;margin-bottom:10px;">🖼️</div>
                     <div style="font-size:13px;font-weight:500;text-align:center;padding:0 16px;">Drop image here or tap ☰ to upload</div>
@@ -279,6 +308,7 @@
             <div id="popup-canvas-wrap" onwheel="popupZoomWheel(event)">
                 <canvas id="popup-canvas"></canvas>
                 <div id="popup-sel-overlays"></div>
+                <div id="popup-grid-handles"></div>
                 <div id="drag-box"></div>
             </div>
         </div>
@@ -304,11 +334,13 @@
                     <div class="text-xs text-slate-400 mt-0.5">Edit name (suffix only) or fine-tune crop</div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <!-- Import individual card images -->
-                    <label class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1">
+                    <!-- Import pre-cut card images directly -->
+                    <label class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1" title="Import already-cut card images — opens edit for each">
                         ➕ Add Cards
                         <input type="file" id="import-cards-upload" accept="image/*" multiple class="hidden" onchange="importIndividualCards(event)">
                     </label>
+                    <!-- Split a new sheet image into this set -->
+                    <button onclick="openSplitIntoSet()" class="px-3 py-1.5 bg-blue-700 hover:bg-blue-600 rounded-xl text-xs transition-colors whitespace-nowrap">✂️ Split Additional Cards</button>
                     <button onclick="document.getElementById('review-modal').classList.remove('open')" class="text-sm bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg">Back</button>
                 </div>
             </div>
@@ -380,7 +412,56 @@
     </div>
 </div>
 
-<!-- EDIT MODAL — zoom/pan canvas + pixel crop inputs -->
+<!-- SPLIT-INTO-SET MODAL (same as select but appends to existing slicedCards) -->
+<div id="split-modal" class="modal-overlay">
+    <div class="modal-inner" style="max-width:960px;">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-slate-800 flex-shrink-0 gap-3">
+            <div>
+                <div class="text-base font-semibold leading-tight">Split Image → Add to Set</div>
+                <div class="text-xs text-slate-500 mt-0.5">Upload a sheet, set grid, select cards — they'll be appended to the current set</div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <button onclick="splitSelectAll()" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded-xl text-xs font-medium transition-colors">Select All</button>
+                <button onclick="splitDeselectAll()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs transition-colors">Deselect All</button>
+                <button onclick="splitResetView()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs transition-colors">Fit</button>
+                <div class="w-px h-5 bg-slate-700"></div>
+                <button onclick="closeSplitModal()" class="w-8 h-8 flex items-center justify-center bg-slate-700 hover:bg-slate-600 rounded-xl text-slate-300 font-bold">✕</button>
+            </div>
+        </div>
+        <!-- Image upload for split-into-set -->
+        <div class="px-5 py-2.5 bg-slate-900/60 border-b border-slate-800 flex items-center gap-3 flex-shrink-0 flex-wrap">
+            <label class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs cursor-pointer transition-colors whitespace-nowrap">
+                📸 Load Sheet Image
+                <input type="file" id="split-file-input" accept="image/*" class="hidden" onchange="splitLoadImage(event)">
+            </label>
+            <div class="flex items-center gap-2">
+                <span class="text-slate-400 text-xs">Cols</span>
+                <input id="split-cols" type="number" value="4" min="1" oninput="splitUpdateGrid()" class="w-11 bg-slate-800 text-center border border-slate-700 rounded-xl py-1 font-mono text-sm">
+                <button onclick="splitSyncRows()" class="px-1.5 py-1 bg-slate-700 hover:bg-emerald-700 rounded-lg text-xs font-bold transition-colors">=</button>
+                <span class="text-slate-400 text-xs">Rows</span>
+                <input id="split-rows" type="number" value="3" min="1" oninput="splitUpdateGrid()" class="w-11 bg-slate-800 text-center border border-slate-700 rounded-xl py-1 font-mono text-sm">
+            </div>
+            <div id="split-scan-name" class="text-xs text-slate-400 truncate max-w-xs">No image loaded</div>
+        </div>
+        <div style="flex:1;display:flex;padding:14px;background:#020617;min-height:0;">
+            <div id="split-canvas-wrap" onwheel="splitZoomWheel(event)" style="width:100%;flex:1;min-height:0;background:repeating-conic-gradient(#334155 0% 25%,#1e293b 0% 50%) 0 0/20px 20px;border-radius:12px;overflow:hidden;position:relative;touch-action:none;cursor:crosshair;">
+                <canvas id="split-canvas" style="image-rendering:crisp-edges;transform-origin:0 0;position:absolute;top:0;left:0;"></canvas>
+                <div id="split-sel-overlays" style="position:absolute;top:0;left:0;width:0;height:0;transform-origin:0 0;pointer-events:none;z-index:30;"></div>
+                <div id="split-hint" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;color:#475569;">
+                    <div style="font-size:48px;margin-bottom:8px;">🖼️</div>
+                    <div style="font-size:13px;">Load a sheet image above</div>
+                </div>
+            </div>
+        </div>
+        <div class="px-5 py-3 border-t border-slate-800 flex items-center justify-between flex-shrink-0 bg-slate-900/40">
+            <div class="flex items-center gap-3">
+                <span id="split-counter" class="text-emerald-400 font-mono text-sm font-semibold">0 / 0</span>
+                <span class="text-xs text-slate-500">cards selected</span>
+            </div>
+            <button onclick="splitSliceAndAppend()" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold transition-colors">✂️ Slice &amp; Append to Set</button>
+        </div>
+    </div>
+</div>
 <div id="edit-modal" class="modal-overlay z-[700]">
     <div class="modal-inner" style="max-width:1100px;">
         <div class="px-5 py-3 border-b border-slate-800 bg-slate-900 flex items-center justify-between flex-shrink-0">
@@ -395,6 +476,7 @@
             <div class="bg-slate-950 flex flex-col p-3 min-w-0" style="flex:1 1 0;min-height:220px;">
                 <div id="edit-canvas-wrap" onwheel="editZoomWheel(event)" style="flex:1;min-height:0;">
                     <canvas id="edit-canvas"></canvas>
+                    <div id="edit-crop-handles" style="position:absolute;top:0;left:0;width:0;height:0;transform-origin:0 0;pointer-events:none;z-index:35;"></div>
                 </div>
                 <div class="flex gap-2 mt-2 flex-shrink-0">
                     <button onclick="editResetView()" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs">Fit</button>
@@ -482,6 +564,8 @@ let slicedCards=[],cardBackDataUrl=null,editingCardId=null;
 let eZoom=1,ePanX=0,ePanY=0,eIsPanning=false,eTouchState=null,eLastX=0,eLastY=0;
 let ctxCardId=null;
 let tilePad={left:0,right:0,top:0,bottom:0};
+// Edit canvas perf: cache the loaded image, throttle redraws with RAF
+let _editImgCache=null, _editImgSrc='', _editRafPending=false;
 
 function updateTilePad(){
     ['left','right','top','bottom'].forEach(d=>{
@@ -509,6 +593,8 @@ function syncPdfLabel(){
 document.addEventListener('DOMContentLoaded',()=>{
     const lbl=document.getElementById('pdf-batch-label');
     if(lbl){lbl.value=currentPrefix;lbl.dataset.manuallyEdited='0';lbl.addEventListener('input',()=>lbl.dataset.manuallyEdited='1');}
+    attachGridHandleEvents('grid-handles',false);
+    attachGridHandleEvents('popup-grid-handles',true);
 });
 
 /* ════ FILE UPLOAD ════ */
@@ -669,6 +755,7 @@ function updatePreview(){
     const infoEl=document.getElementById('radius-info');
     if(infoEl)infoEl.textContent=pixelRadius>0?`≈ ${Math.round(pixelRadius)} px at current resolution`:'';
     renderSelectionOverlays();
+    renderGridHandles('preview-canvas','grid-handles',currentScan,zoom,panX,panY);
 }
 function renderSelectionOverlays(){
     const c=document.getElementById('selection-overlays');c.innerHTML='';if(!currentScan)return;
@@ -692,7 +779,132 @@ function renderSelectionOverlays(){
     });
 }
 
-/* ════ MAIN PAN/ZOOM ════ */
+/* ════ GRID CROP DRAG HANDLES ════ */
+let _gridDrag=null; // {type:'left'|'right'|'top'|'bottom'|'move', startX, startY, startVal, scan, isPopup}
+
+function renderGridHandles(canvasId, handlesId, scan, cz, panXv, panYv){
+    const container=document.getElementById(handlesId);if(!container)return;
+    container.innerHTML='';
+    if(!scan)return;
+    const canvas=document.getElementById(canvasId);
+    const W=canvas.width,H=canvas.height;if(!W||!H)return;
+    container.style.width=W+'px';container.style.height=H+'px';
+    container.style.transform=`translate(${panXv}px,${panYv}px) scale(${cz})`;
+
+    const l=scan.cropLeft,t=scan.cropTop,r=scan.cropRight,b=scan.cropBottom;
+    const effW=W-l-r,effH=H-t-b;
+    const cx=l+effW/2,cy=t+effH/2;
+
+    // Helper: create a handle div
+    const mkHandle=(x,y,cls,type)=>{
+        const d=document.createElement('div');
+        d.className=`grid-handle ${cls}`;d.dataset.type=type;
+        d.style.left=x+'px';d.style.top=y+'px';
+        // counter-scale so handle is always ~constant viewport size
+        d.style.setProperty('--hz-inv', (1/cz).toFixed(5));
+        container.appendChild(d);
+        return d;
+    };
+
+    // 4 edge handles (midpoints of each border)
+    mkHandle(cx, t,           'edge-h', 'top');
+    mkHandle(cx, t+effH,      'edge-h', 'bottom');
+    mkHandle(l,  cy,           'edge-v', 'left');
+    mkHandle(l+effW, cy,       'edge-v', 'right');
+
+    // 4 corner handles
+    mkHandle(l,      t,       'corner nw', 'corner-tl');
+    mkHandle(l+effW, t,       'corner ne', 'corner-tr');
+    mkHandle(l,      t+effH,  'corner sw', 'corner-bl');
+    mkHandle(l+effW, t+effH,  'corner br', 'corner-br');
+}
+
+function updateGridHandlesTransform(canvasId, handlesId, cz, panXv, panYv){
+    const container=document.getElementById(handlesId);if(!container)return;
+    container.style.transform=`translate(${panXv}px,${panYv}px) scale(${cz})`;
+}
+
+// Attach handle mousedown via event delegation on each handles container
+function attachGridHandleEvents(handlesId, isPopup){
+    const container=document.getElementById(handlesId);if(!container)return;
+    container.addEventListener('mousedown',e=>{
+        const h=e.target.closest('.grid-handle');if(!h)return;
+        e.preventDefault();e.stopPropagation();
+        const scan=isPopup?(currentScan):currentScan;
+        if(!scan)return;
+        const canvas=document.getElementById(isPopup?'popup-canvas':'preview-canvas');
+        const W=canvas.width,H=canvas.height;
+        _gridDrag={type:h.dataset.type,startClientX:e.clientX,startClientY:e.clientY,
+            startL:scan.cropLeft,startT:scan.cropTop,startR:scan.cropRight,startB:scan.cropBottom,
+            W,H,isPopup,cz:isPopup?pZoom:zoom};
+    });
+}
+
+document.addEventListener('mousemove',e=>{
+    if(!_gridDrag)return;
+    const scan=currentScan;if(!scan)return;
+    const cz=_gridDrag.cz;
+    let dxPx=(e.clientX-_gridDrag.startClientX)/cz;
+    let dyPx=(e.clientY-_gridDrag.startClientY)/cz;
+    const W=_gridDrag.W,H=_gridDrag.H;
+
+
+    const type=_gridDrag.type;
+    // Aspect-ratio lock with Shift on corners
+    if(e.shiftKey&&type.startsWith('corner')){
+        const effW=W-_gridDrag.startL-_gridDrag.startR;
+        const effH=H-_gridDrag.startT-_gridDrag.startB;
+        if(effH>0&&effW>0){
+            const aspect=effW/effH;
+            // Figure out which axis is the "driving" one for this corner
+            // Corner-tl: both increase (left+top), corner-br: both decrease
+            // Use the larger absolute movement to drive, scale the other
+            const absDx=Math.abs(dxPx), absDy=Math.abs(dyPx);
+            if(absDx/aspect >= absDy){
+                // dx drives: compute what dy should be
+                dyPx = (dxPx / aspect);
+                // For tl/br corners dx and dy move same direction; for tr/bl they move opposite
+                if(type==='corner-tr'||type==='corner-bl') dyPx=-dyPx;
+            } else {
+                // dy drives
+                dxPx = (dyPx * aspect);
+                if(type==='corner-tr'||type==='corner-bl') dxPx=-dxPx;
+            }
+        }
+    }
+
+    // Now apply with clamping (clamp AFTER ratio so both sides stay in sync)
+    const maxL=W-_gridDrag.startR-10, maxR=W-_gridDrag.startL-10;
+    const maxT=H-_gridDrag.startB-10, maxB=H-_gridDrag.startT-10;
+
+    if(type==='left'||type==='corner-tl'||type==='corner-bl'){
+        const v=Math.round(Math.max(0,Math.min(_gridDrag.startL+dxPx,maxL)));
+        document.getElementById('crop-left').value=v;document.getElementById('crop-left-num').value=v;scan.cropLeft=v;
+    }
+    if(type==='right'||type==='corner-tr'||type==='corner-br'){
+        const v=Math.round(Math.max(0,Math.min(_gridDrag.startR-dxPx,maxR)));
+        document.getElementById('crop-right').value=v;document.getElementById('crop-right-num').value=v;scan.cropRight=v;
+    }
+    if(type==='top'||type==='corner-tl'||type==='corner-tr'){
+        const v=Math.round(Math.max(0,Math.min(_gridDrag.startT+dyPx,maxT)));
+        document.getElementById('crop-top').value=v;document.getElementById('crop-top-num').value=v;scan.cropTop=v;
+    }
+    if(type==='bottom'||type==='corner-bl'||type==='corner-br'){
+        const v=Math.round(Math.max(0,Math.min(_gridDrag.startB-dyPx,maxB)));
+        document.getElementById('crop-bottom').value=v;document.getElementById('crop-bottom-num').value=v;scan.cropBottom=v;
+    }
+
+    updatePreview();
+    renderGridHandles('preview-canvas','grid-handles',scan,zoom,panX,panY);
+    if(_gridDrag.isPopup){
+        popupRender();
+        renderGridHandles('popup-canvas','popup-grid-handles',scan,pZoom,pPanX,pPanY);
+    }
+});
+
+document.addEventListener('mouseup',e=>{
+    if(_gridDrag){_gridDrag=null;}
+});
 const previewWrapper=document.getElementById('preview-wrapper');
 previewWrapper.addEventListener('touchstart',e=>{
     if(e.touches.length===1)touchState={type:'pan',x:e.touches[0].clientX,y:e.touches[0].clientY};
@@ -705,17 +917,42 @@ previewWrapper.addEventListener('touchmove',e=>{
     else if(touchState.type==='pinch'&&e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;const nd=Math.hypot(dx,dy);const c=document.getElementById('preview-canvas');const fitZ=Math.min(previewWrapper.clientWidth/c.width,previewWrapper.clientHeight/c.height);zoom=Math.max(fitZ*0.08,Math.min(touchState.zoom*(nd/touchState.dist),10));applyTransform();}
 },{passive:false});
 previewWrapper.addEventListener('touchend',e=>{if(e.touches.length===0)touchState=null;});
-function startPan(e){if(e.button!==0)return;isPanning=true;lastX=e.clientX;lastY=e.clientY;previewWrapper.style.cursor='grabbing';}
+function startPan(e){
+    if(e.button!==0)return;
+    // Don't start pan if clicking on a grid handle
+    if(e.target.classList.contains('grid-handle'))return;
+    isPanning=true;lastX=e.clientX;lastY=e.clientY;previewWrapper.style.cursor='grabbing';
+}
 document.addEventListener('mousemove',e=>{
     if(isPanning){panX+=e.clientX-lastX;panY+=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;applyTransform();}
     if(pIsPanning){pPanX+=e.clientX-lastX;pPanY+=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;popupApplyTransform();}
     if(eIsPanning){ePanX+=e.clientX-eLastX;ePanY+=e.clientY-eLastY;eLastX=e.clientX;eLastY=e.clientY;editApplyTransform();}
     if(isDraggingBox){const rect=popupWrap.getBoundingClientRect();const cx=e.clientX-rect.left,cy=e.clientY-rect.top;const x=Math.min(cx,dragStartX),y=Math.min(cy,dragStartY);const w=Math.abs(cx-dragStartX),h=Math.abs(cy-dragStartY);const db=document.getElementById('drag-box');db.style.left=x+'px';db.style.top=y+'px';db.style.width=w+'px';db.style.height=h+'px';}
+    if(sIsPanning){sPanX+=e.clientX-lastX;sPanY+=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;splitApplyTransform();}
+    // Edit modal crop handle drag
+    if(_editCropDrag){
+        const dxPx=(e.clientX-_editCropDrag.startClientX)/eZoom;
+        const dyPx=(e.clientY-_editCropDrag.startClientY)/eZoom;
+        const{cardW,cardH,startL,startR,startT,startB,type,marginL,marginT,marginR,marginB}=_editCropDrag;
+        // min = negative margin (expand), max = card dimension minus opposing side - 4
+        const setSlider=(id,valLabel,v,minV,maxV)=>{
+            const rv=Math.round(Math.max(minV,Math.min(v,maxV)));
+            document.getElementById(id).value=rv;
+            document.getElementById(id+'-num').value=rv;
+            document.getElementById(valLabel).textContent=rv+'px';
+        };
+        if(type==='left'||type==='corner-tl'||type==='corner-bl')   setSlider('e-crop-l','el-val',startL+dxPx,-marginL,cardW-startR-4);
+        if(type==='right'||type==='corner-tr'||type==='corner-br')  setSlider('e-crop-r','er-val',startR-dxPx,-marginR,cardW-startL-4);
+        if(type==='top'||type==='corner-tl'||type==='corner-tr')    setSlider('e-crop-t','et-val',startT+dyPx,-marginT,cardH-startB-4);
+        if(type==='bottom'||type==='corner-bl'||type==='corner-br') setSlider('e-crop-b','eb-val',startB-dyPx,-marginB,cardH-startT-4);
+        updateEditCanvas();
+    }
 });
 document.addEventListener('mouseup',e=>{
     if(isPanning){isPanning=false;previewWrapper.style.cursor='grab';}
     if(pIsPanning){pIsPanning=false;popupWrap.style.cursor='crosshair';}
     if(eIsPanning){eIsPanning=false;editCanvasWrap.style.cursor='grab';}
+    if(_editCropDrag){_editCropDrag=null;}
     if(isDraggingBox){
         isDraggingBox=false;document.getElementById('drag-box').style.display='none';
         const rect=popupWrap.getBoundingClientRect();const cx=e.clientX-rect.left,cy=e.clientY-rect.top;
@@ -735,7 +972,12 @@ document.addEventListener('mouseup',e=>{
     }
 });
 function zoomWithWheel(e){if(!currentScan)return;e.preventDefault();const f=e.deltaY<0?1.15:0.87;const c=document.getElementById('preview-canvas'),w=previewWrapper;const fz=Math.min(w.clientWidth/c.width,w.clientHeight/c.height);const old=zoom;zoom=Math.max(fz*0.08,Math.min(zoom*f,10));const rect=w.getBoundingClientRect();panX-=(e.clientX-rect.left-panX)*(zoom/old-1);panY-=(e.clientY-rect.top-panY)*(zoom/old-1);applyTransform();}
-function applyTransform(){const c=document.getElementById('preview-canvas'),o=document.getElementById('selection-overlays');const t=`translate(${panX}px,${panY}px) scale(${zoom})`;c.style.transform=t;if(o)o.style.transform=t;updatePreview();}
+function applyTransform(){
+    const c=document.getElementById('preview-canvas'),o=document.getElementById('selection-overlays');
+    const t=`translate(${panX}px,${panY}px) scale(${zoom})`;c.style.transform=t;if(o)o.style.transform=t;
+    updateGridHandlesTransform('preview-canvas','grid-handles',zoom,panX,panY);
+    updatePreview();
+}
 function resetView(){if(!currentScan)return;const w=previewWrapper,c=document.getElementById('preview-canvas');zoom=Math.min((w.clientWidth*.9)/c.width,(w.clientHeight*.9)/c.height);panX=(w.clientWidth-c.width*zoom)/2;panY=(w.clientHeight-c.height*zoom)/2;applyTransform();}
 
 /* ════ SELECT MODAL — Lasso always on, middle mouse pans ════ */
@@ -826,7 +1068,9 @@ function popupZoomWheel(e){
 }
 function popupApplyTransform(){
     const c=document.getElementById('popup-canvas'),o=document.getElementById('popup-sel-overlays');
-    const t=`translate(${pPanX}px,${pPanY}px) scale(${pZoom})`;c.style.transform=t;if(o)o.style.transform=t;popupRender();
+    const t=`translate(${pPanX}px,${pPanY}px) scale(${pZoom})`;c.style.transform=t;if(o)o.style.transform=t;
+    updateGridHandlesTransform('popup-canvas','popup-grid-handles',pZoom,pPanX,pPanY);
+    popupRender();
 }
 function popupResetView(){
     if(!currentScan)return;const src=getTransformedCanvas();const c=document.getElementById('popup-canvas');c.width=src.width;c.height=src.height;
@@ -837,6 +1081,7 @@ function popupResetView(){
 function popupRender(){
     if(!currentScan)return;const canvas=document.getElementById('popup-canvas');const src=getTransformedCanvas();
     drawGridOnCanvas(canvas,src,currentScan,pZoom);popupRenderOverlays();updatePopupCounter();
+    renderGridHandles('popup-canvas','popup-grid-handles',currentScan,pZoom,pPanX,pPanY);
 }
 function popupRenderOverlays(){
     const container=document.getElementById('popup-sel-overlays');container.innerHTML='';
@@ -880,42 +1125,73 @@ function updateReviewBtn(){
     else{btn.classList.add('opacity-40','cursor-default');btn.classList.remove('hover:bg-slate-600');}
 }
 
+/* ════ SLICE HELPER — cuts with rotation-safe margin ════ */
+function sliceWithMargin(src, col, row, scan, radiusMM){
+    const sw=src.width,sh=src.height;
+    const l=scan.cropLeft,t=scan.cropTop,r=scan.cropRight,b=scan.cropBottom;
+    const tileW=(sw-l-r)/scan.cols,tileH=(sh-t-b)/scan.rows;
+    const pad=tilePad;
+
+    // The "clean" tile area (after tile-padding)
+    const csx=l+col*tileW+pad.left, csy=t+row*tileH+pad.top;
+    const cw=tileW-pad.left-pad.right, ch=tileH-pad.top-pad.bottom;
+
+    // Rotation-safe margin: enough pixels to rotate the tile without clipping
+    // For a rectangle of size cw×ch, max needed diagonal extra = (diag - min(cw,ch)) / 2
+    const diag=Math.ceil(Math.hypot(cw,ch));
+    const marginPx=Math.ceil((diag-Math.min(cw,ch))/2)+2; // +2px safety
+
+    // Oversized source rect (clamped to image bounds)
+    const osx=Math.max(0,csx-marginPx), osy=Math.max(0,csy-marginPx);
+    const oex=Math.min(sw,csx+cw+marginPx), oey=Math.min(sh,csy+ch+marginPx);
+    const ow=oex-osx, oh=oey-osy;
+
+    // Draw oversized tile (originalDataUrl — used for rotation/re-crop)
+    const off=document.createElement('canvas');off.width=Math.round(ow);off.height=Math.round(oh);
+    off.getContext('2d').drawImage(src,osx,osy,ow,oh,0,0,off.width,off.height);
+    const originalDataUrl=off.toDataURL('image/png');
+
+    // The offset of the clean tile within the oversized canvas
+    const ox=csx-osx, oy=csy-osy;
+
+    // Draw the final display version (no rotation, corner-radius applied)
+    const foff=document.createElement('canvas');foff.width=Math.round(cw);foff.height=Math.round(ch);
+    const fctx=foff.getContext('2d');
+    const pixelRadius=(radiusMM/(scan.cardWidthMM||63))*cw;
+    if(pixelRadius>0.5){
+        fctx.save();fctx.beginPath();roundRectPath(fctx,0,0,foff.width,foff.height,pixelRadius);fctx.clip();
+        fctx.drawImage(src,csx,csy,cw,ch,0,0,foff.width,foff.height);fctx.restore();
+    } else {
+        fctx.drawImage(src,csx,csy,cw,ch,0,0,foff.width,foff.height);
+    }
+
+    return {
+        originalDataUrl,          // oversized, for re-crop/rotate
+        dataUrl:foff.toDataURL('image/png'), // display/export version
+        w:Math.round(cw), h:Math.round(ch),  // clean tile size
+        marginPx,                 // how much extra is in originalDataUrl on each side
+        offsetX:Math.round(ox), offsetY:Math.round(oy), // tile origin within oversized
+    };
+}
+
 function sliceCardsAndReview(){
     if(!currentScan||currentScan.selectedTiles.size===0){alert('Please select at least one card!');return;}
     closeSelectModal();
     const src=getTransformedCanvas();
-    const sw=src.width,sh=src.height,l=currentScan.cropLeft,t=currentScan.cropTop,r=currentScan.cropRight,b=currentScan.cropBottom;
-    const tileW=(sw-l-r)/currentScan.cols,tileH=(sh-t-b)/currentScan.rows;
     const radiusMM=parseFloat(document.getElementById('corner-radius-mm').value)||0;
-    const pixelRadius=(radiusMM/(currentScan.cardWidthMM||63))*tileW;
-
     slicedCards=[];
-    const off=document.createElement('canvas'),ctx=off.getContext('2d');
     const sorted=[...currentScan.selectedTiles].sort((a,b)=>a-b);let idx=1;
-
     for(const i of sorted){
         const col=i%currentScan.cols,row=Math.floor(i/currentScan.cols);
-        // Apply tile padding offset to the slice coordinates
-        const pad=tilePad;
-        const sx=l+col*tileW+pad.left, sy=t+row*tileH+pad.top;
-        const sw=tileW-pad.left-pad.right, sh=tileH-pad.top-pad.bottom;
-        off.width=Math.round(Math.max(1,sw));off.height=Math.round(Math.max(1,sh));
-        ctx.clearRect(0,0,off.width,off.height);
-        ctx.drawImage(src,sx,sy,sw,sh,0,0,off.width,off.height);
-        const originalDataUrl=off.toDataURL('image/png');
-        const effPixelRadius=(radiusMM/(currentScan.cardWidthMM||63))*sw;
-        if(effPixelRadius>0.5){
-            ctx.clearRect(0,0,off.width,off.height);
-            ctx.save();ctx.beginPath();roundRectPath(ctx,0,0,off.width,off.height,effPixelRadius);ctx.clip();
-            ctx.drawImage(src,sx,sy,sw,sh,0,0,off.width,off.height);ctx.restore();
-        }
-        const dataUrl=off.toDataURL('image/png');
+        const s=sliceWithMargin(src,col,row,currentScan,radiusMM);
         slicedCards.push({
             id:i,idx,
-            suffix:String(idx).padStart(3,'0'),   // suffix only, prefix separate
-            name:`${currentPrefix}_${String(idx).padStart(3,'0')}`, // full name for back dropdown only
+            suffix:String(idx).padStart(3,'0'),
+            name:`${currentPrefix}_${String(idx).padStart(3,'0')}`,
             copies:1,
-            dataUrl,originalDataUrl,w:off.width,h:off.height,trim:{l:0,t:0,r:0,b:0}
+            dataUrl:s.dataUrl, originalDataUrl:s.originalDataUrl,
+            w:s.w, h:s.h, marginPx:s.marginPx, offsetX:s.offsetX, offsetY:s.offsetY,
+            trim:{l:0,t:0,r:0,b:0,rot:0}
         });
         idx++;
     }
@@ -936,7 +1212,7 @@ function importIndividualCards(e){
                 off.getContext('2d').drawImage(img,0,0);
                 const dataUrl=off.toDataURL('image/png');
                 const namePart=f.name.replace(/\.[^/.]+$/,'');
-                slicedCards.push({id:Date.now()+idx,idx,suffix:namePart,name:namePart,copies:1,dataUrl,originalDataUrl:dataUrl,w:img.width,h:img.height,trim:{l:0,t:0,r:0,b:0}});
+                slicedCards.push({id:Date.now()+idx,idx,suffix:namePart,name:namePart,copies:1,dataUrl,originalDataUrl:dataUrl,w:img.width,h:img.height,marginPx:0,offsetX:0,offsetY:0,trim:{l:0,t:0,r:0,b:0,rot:0}});
                 idx++;res();
             };img.src=ev.target.result;
         };reader.readAsDataURL(f);
@@ -953,34 +1229,94 @@ function renderReviewGrid(){
         div.className='review-card cursor-pointer select-none';
         div.dataset.cardId=card.id;
 
+        // ── Image wrapper ──
         const imgWrap=document.createElement('div');
         imgWrap.className='relative checker-bg rounded-t-xl flex items-center justify-center overflow-hidden';
-        imgWrap.style.cssText='height:150px;flex-shrink:0;';
+        imgWrap.style.cssText='height:150px;flex-shrink:0;position:relative;';
         const img=document.createElement('img');
         img.src=card.dataUrl;img.className='max-w-full max-h-full object-contain drop-shadow';
         imgWrap.appendChild(img);
 
-        // Copies badge (only shown when > 1)
+        // Copies badge
         const badge=document.createElement('div');
-        badge.className='copies-badge';
-        badge.id=`copies-badge-${card.id}`;
-        badge.textContent=`×${card.copies||1}`;
-        badge.style.display=(card.copies||1)>1?'block':'none';
+        badge.className='copies-badge';badge.id=`copies-badge-${card.id}`;
+        badge.textContent=`×${card.copies||1}`;badge.style.display=(card.copies||1)>1?'block':'none';
         imgWrap.appendChild(badge);
 
+        // ── Hover overlay: copies ± and edit button ──
+        const hover=document.createElement('div');
+        hover.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;opacity:0;transition:opacity .15s;background:rgba(2,6,23,.55);border-radius:inherit;';
+        hover.innerHTML=`
+            <button class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-semibold transition-colors w-24"
+                onclick="event.stopPropagation();openEditModal(${card.id})">✂️ Edit</button>
+            <div class="flex items-center gap-2">
+                <button style="width:26px;height:26px;border-radius:8px;background:#334155;border:1px solid #475569;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;"
+                    onclick="event.stopPropagation();hoverChangeCopies(${card.id},-1)">−</button>
+                <span id="hover-copies-${card.id}" style="min-width:22px;text-align:center;font-size:12px;font-weight:700;font-family:monospace;color:#e2e8f0;">${card.copies||1}</span>
+                <button style="width:26px;height:26px;border-radius:8px;background:#334155;border:1px solid #475569;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;"
+                    onclick="event.stopPropagation();hoverChangeCopies(${card.id},+1)">+</button>
+            </div>`;
+        imgWrap.appendChild(hover);
+
+        // Prevent dblclick on the hover overlay buttons from triggering edit
+        hover.addEventListener('dblclick',e=>{e.stopPropagation();});
+
+        // Show/hide hover overlay
+        imgWrap.addEventListener('mouseenter',()=>hover.style.opacity='1');
+        imgWrap.addEventListener('mouseleave',()=>hover.style.opacity='0');
+
+        // Double-click on empty image area (not on hover buttons) → edit
+        imgWrap.addEventListener('dblclick',e=>{if(e.target===img||e.target===imgWrap){e.stopPropagation();openEditModal(card.id);}});
+
+        // ── Name label ──
         const label=document.createElement('div');
         label.className='px-2.5 py-2 text-xs font-mono text-slate-300 truncate text-center border-t border-slate-800 flex-shrink-0';
-        label.id=`card-label-${card.id}`;
-        label.textContent=card.suffix||'(unnamed)';
+        label.id=`card-label-${card.id}`;label.textContent=card.suffix||'(unnamed)';
+        label.title='Double-click to rename';
+
+        // Double-click name → inline rename
+        label.addEventListener('dblclick',e=>{e.stopPropagation();triggerRename(card.id);});
 
         div.appendChild(imgWrap);div.appendChild(label);
 
-        // Click = open context menu
+        // Single click → context menu
         div.addEventListener('click',e=>{e.stopPropagation();openCardCtxMenu(card.id,e);});
-        // Right-click also opens it
         div.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();openCardCtxMenu(card.id,e);});
         grid.appendChild(div);
     });
+}
+
+function hoverChangeCopies(id,delta){
+    const card=slicedCards.find(sc=>sc.id==id);if(!card)return;
+    card.copies=Math.max(1,(card.copies||1)+delta);
+    const hc=document.getElementById(`hover-copies-${id}`);if(hc)hc.textContent=card.copies;
+    const badge=document.getElementById(`copies-badge-${id}`);
+    if(badge){badge.textContent=`×${card.copies}`;badge.style.display=card.copies>1?'block':'none';}
+    // Sync ctx menu if open for same card
+    if(ctxCardId==id)document.getElementById('ctx-copies-val').textContent=card.copies;
+    updateReviewBtn();
+}
+
+function triggerRename(id){
+    const label=document.getElementById(`card-label-${id}`);if(!label)return;
+    const card=slicedCards.find(sc=>sc.id==id);if(!card)return;
+    const oldVal=card.suffix;
+    const inp=document.createElement('input');
+    inp.type='text';inp.value=oldVal;
+    inp.className='w-full bg-slate-950 border border-blue-500 rounded text-xs px-2 py-0.5 font-mono text-center outline-none';
+    inp.style.cssText='display:block;box-sizing:border-box;';
+    label.replaceWith(inp);inp.focus();inp.select();
+    const commit=()=>{
+        const newVal=inp.value.trim()||oldVal;
+        card.suffix=newVal;card.name=newVal;populateBackCardSelect();
+        const newLabel=document.createElement('div');
+        newLabel.className='px-2.5 py-2 text-xs font-mono text-slate-300 truncate text-center border-t border-slate-800 flex-shrink-0';
+        newLabel.id=`card-label-${id}`;newLabel.textContent=newVal;newLabel.title='Double-click to rename';
+        newLabel.addEventListener('dblclick',e=>{e.stopPropagation();triggerRename(id);});
+        inp.replaceWith(newLabel);
+    };
+    inp.addEventListener('blur',commit);
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();commit();}if(e.key==='Escape'){inp.value=oldVal;commit();}});
 }
 
 /* ── Card Context Menu ── */
@@ -1017,32 +1353,19 @@ document.addEventListener('keydown',e=>{
         document.querySelectorAll('.review-card').forEach(el=>el.classList.remove('card-selected'));
         ctxCardId=null;
     }
+    // Delete/Backspace in edit modal deletes the card
+    if((e.key==='Delete'||e.key==='Backspace')&&document.getElementById('edit-modal').classList.contains('open')){
+        // Only if not focused on an input
+        if(document.activeElement&&(document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='TEXTAREA'))return;
+        e.preventDefault();
+        const id=editingCardId;
+        document.getElementById('edit-modal').classList.remove('open');
+        slicedCards=slicedCards.filter(c=>c.id!==id);
+        renderReviewGrid();populateBackCardSelect();updateReviewBtn();
+    }
 });
 
-function ctxRename(){
-    const id=ctxCardId;closeCardCtxMenu();
-    const card=slicedCards.find(sc=>sc.id===id);if(!card)return;
-    const label=document.getElementById(`card-label-${id}`);if(!label)return;
-    const oldVal=card.suffix;
-    const inp=document.createElement('input');
-    inp.type='text';inp.value=oldVal;
-    inp.className='w-full bg-slate-950 border border-blue-500 rounded text-xs px-2 py-0.5 font-mono text-center outline-none rename-input-active';
-    inp.style.cssText='display:block;box-sizing:border-box;';
-    label.replaceWith(inp);inp.focus();inp.select();
-    const commit=()=>{
-        const newVal=inp.value.trim()||oldVal;
-        card.suffix=newVal;card.name=newVal;
-        populateBackCardSelect();
-        const newLabel=document.createElement('div');
-        newLabel.className='px-2.5 py-2 text-xs font-mono text-slate-300 truncate text-center border-t border-slate-800 flex-shrink-0';
-        newLabel.id=`card-label-${id}`;newLabel.textContent=newVal;
-        inp.replaceWith(newLabel);
-        // re-attach click handler
-        newLabel.closest('.review-card').querySelector('div[data-card-id]');
-    };
-    inp.addEventListener('blur',commit);
-    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();commit();}if(e.key==='Escape'){inp.value=oldVal;commit();}});
-}
+function ctxRename(){const id=ctxCardId;closeCardCtxMenu();triggerRename(id);}
 function ctxEdit(){const id=ctxCardId;closeCardCtxMenu();openEditModal(id);}
 function ctxChangeCopies(delta){
     if(ctxCardId===null||ctxCardId===undefined)return;
@@ -1064,6 +1387,160 @@ function updateCardSuffix(id,val){
     if(c){c.suffix=val;c.name=val;populateBackCardSelect();}
 }
 
+/* ════ SPLIT-INTO-SET MODAL ════ */
+let splitScan=null,sZoom=1,sPanX=0,sPanY=0,sIsPanning=false,sDragBox=false,sDragStartX=0,sDragStartY=0;
+
+function openSplitIntoSet(){document.getElementById('split-modal').classList.add('open');}
+function closeSplitModal(){document.getElementById('split-modal').classList.remove('open');}
+
+const splitWrap=document.getElementById('split-canvas-wrap');
+function splitLoadImage(e){
+    const f=e.target.files[0];if(!f)return;
+    const img=new Image();
+    img.onload=()=>{
+        splitScan={name:f.name,originalImage:img,
+            cols:parseInt(document.getElementById('split-cols').value)||4,
+            rows:parseInt(document.getElementById('split-rows').value)||3,
+            cropLeft:0,cropTop:0,cropRight:0,cropBottom:0,
+            cardWidthMM:parseFloat(document.getElementById('card-width-mm').value)||63,
+            cardHeightMM:parseFloat(document.getElementById('card-height-mm').value)||88,
+            selectedTiles:new Set(),rotation:0,
+            brightness:100,contrast:100,saturation:100,hue:0
+        };
+        document.getElementById('split-scan-name').textContent=f.name;
+        document.getElementById('split-hint').style.display='none';
+        const c=document.getElementById('split-canvas');c.width=img.width;c.height=img.height;
+        splitResetView();splitRender();
+    };
+    img.src=URL.createObjectURL(f);
+    e.target.value='';
+}
+function splitUpdateGrid(){
+    if(!splitScan)return;
+    splitScan.cols=Math.max(1,parseInt(document.getElementById('split-cols').value)||4);
+    splitScan.rows=Math.max(1,parseInt(document.getElementById('split-rows').value)||3);
+    const total=splitScan.cols*splitScan.rows;
+    splitScan.selectedTiles.forEach(i=>{if(i>=total)splitScan.selectedTiles.delete(i);});
+    splitRender();
+}
+function splitSyncRows(){document.getElementById('split-rows').value=document.getElementById('split-cols').value;splitUpdateGrid();}
+function splitSelectAll(){if(!splitScan)return;for(let i=0;i<splitScan.cols*splitScan.rows;i++)splitScan.selectedTiles.add(i);splitRender();}
+function splitDeselectAll(){if(!splitScan)return;splitScan.selectedTiles.clear();splitRender();}
+
+function splitGetTransformed(){
+    const img=splitScan.originalImage;
+    const tmp=document.createElement('canvas');tmp.width=img.width;tmp.height=img.height;
+    tmp.getContext('2d').drawImage(img,0,0);return tmp;
+}
+
+function splitRender(){
+    if(!splitScan)return;
+    const canvas=document.getElementById('split-canvas');const src=splitGetTransformed();
+    // Draw grid using same helper
+    const fakeScan={...splitScan};
+    drawGridOnCanvas(canvas,src,fakeScan,sZoom);
+    // Overlays
+    const cont=document.getElementById('split-sel-overlays');cont.innerHTML='';
+    cont.style.width=canvas.width+'px';cont.style.height=canvas.height+'px';
+    const W=canvas.width,H=canvas.height;
+    const l=0,t=0,r=0,b=0;
+    const tileW=W/splitScan.cols,tileH=H/splitScan.rows;
+    const sb=Math.max(1,2/sZoom);const total=splitScan.cols*splitScan.rows;
+    for(let i=0;i<total;i++){
+        const col=i%splitScan.cols,row=Math.floor(i/splitScan.cols);const sel=splitScan.selectedTiles.has(i);
+        const div=document.createElement('div');div.style.cssText=`position:absolute;pointer-events:none;left:${col*tileW}px;top:${row*tileH}px;width:${tileW}px;height:${tileH}px;border:${sb}px solid ${sel?'#22c55e':'rgba(255,255,255,.08)'};background:${sel?'rgba(134,239,172,.25)':'transparent'};`;
+        cont.appendChild(div);
+    }
+    document.getElementById('split-counter').textContent=`${splitScan.selectedTiles.size} / ${total}`;
+}
+
+function splitApplyTransform(){
+    const c=document.getElementById('split-canvas'),o=document.getElementById('split-sel-overlays');
+    const t=`translate(${sPanX}px,${sPanY}px) scale(${sZoom})`;c.style.transform=t;if(o)o.style.transform=t;splitRender();
+}
+function splitResetView(){
+    if(!splitScan)return;
+    const c=document.getElementById('split-canvas');
+    sZoom=Math.min((splitWrap.clientWidth*.92)/c.width,(splitWrap.clientHeight*.92)/c.height);
+    sPanX=(splitWrap.clientWidth-c.width*sZoom)/2;sPanY=(splitWrap.clientHeight-c.height*sZoom)/2;
+    splitApplyTransform();
+}
+function splitZoomWheel(e){
+    if(!splitScan)return;e.preventDefault();const f=e.deltaY<0?1.15:0.87;
+    const c=document.getElementById('split-canvas');const fz=Math.min(splitWrap.clientWidth/c.width,splitWrap.clientHeight/c.height);const old=sZoom;
+    sZoom=Math.max(fz*0.08,Math.min(sZoom*f,10));
+    const rect=splitWrap.getBoundingClientRect();sPanX-=(e.clientX-rect.left-sPanX)*(sZoom/old-1);sPanY-=(e.clientY-rect.top-sPanY)*(sZoom/old-1);
+    splitApplyTransform();
+}
+
+// Mouse events for split canvas
+splitWrap.addEventListener('mousedown',e=>{
+    if(!splitScan)return;
+    if(e.button===1){e.preventDefault();sIsPanning=true;lastX=e.clientX;lastY=e.clientY;return;}
+    if(e.button===0){sDragBox=true;const rect=splitWrap.getBoundingClientRect();sDragStartX=e.clientX-rect.left;sDragStartY=e.clientY-rect.top;}
+});
+splitWrap.addEventListener('mousemove',e=>{
+    if(sIsPanning){sPanX+=e.clientX-lastX;sPanY+=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;splitApplyTransform();}
+    if(sDragBox){const rect=splitWrap.getBoundingClientRect();const cx=e.clientX-rect.left,cy=e.clientY-rect.top;const x=Math.min(cx,sDragStartX),y=Math.min(cy,sDragStartY);const w=Math.abs(cx-sDragStartX),h=Math.abs(cy-sDragStartY);document.getElementById('drag-box').style.left=x+'px';document.getElementById('drag-box').style.top=y+'px';document.getElementById('drag-box').style.width=w+'px';document.getElementById('drag-box').style.height=h+'px';document.getElementById('drag-box').style.display='block';}
+});
+splitWrap.addEventListener('mouseup',e=>{
+    if(sIsPanning){sIsPanning=false;}
+    if(sDragBox){
+        sDragBox=false;document.getElementById('drag-box').style.display='none';
+        if(!splitScan)return;
+        const rect=splitWrap.getBoundingClientRect();const cx=e.clientX-rect.left,cy=e.clientY-rect.top;
+        const x=Math.min(cx,sDragStartX),y=Math.min(cy,sDragStartY),w=Math.abs(cx-sDragStartX),h=Math.abs(cy-sDragStartY);
+        if(w<4&&h<4){splitToggleTile(cx,cy);}
+        else{
+            const imgX=(x-sPanX)/sZoom,imgY=(y-sPanY)/sZoom,imgW=w/sZoom,imgH=h/sZoom;
+            const W=document.getElementById('split-canvas').width,H=document.getElementById('split-canvas').height;
+            const tileW=W/splitScan.cols,tileH=H/splitScan.rows;
+            for(let row=0;row<splitScan.rows;row++)for(let col=0;col<splitScan.cols;col++){
+                const tx=col*tileW,ty=row*tileH;
+                if(!(imgX>tx+tileW||imgX+imgW<tx||imgY>ty+tileH||imgY+imgH<ty))splitScan.selectedTiles.add(row*splitScan.cols+col);
+            }
+            splitRender();
+        }
+    }
+});
+function splitToggleTile(cx,cy){
+    if(!splitScan)return;
+    const W=document.getElementById('split-canvas').width,H=document.getElementById('split-canvas').height;
+    const imgX=(cx-sPanX)/sZoom,imgY=(cy-sPanY)/sZoom;
+    if(imgX<0||imgY<0||imgX>W||imgY>H)return;
+    const col=Math.floor(imgX/(W/splitScan.cols)),row=Math.floor(imgY/(H/splitScan.rows));
+    const idx=row*splitScan.cols+col;
+    splitScan.selectedTiles.has(idx)?splitScan.selectedTiles.delete(idx):splitScan.selectedTiles.add(idx);
+    splitRender();
+}
+
+function splitSliceAndAppend(){
+    if(!splitScan||splitScan.selectedTiles.size===0){alert('Select at least one card!');return;}
+    const src=splitGetTransformed();
+    const radiusMM=parseFloat(document.getElementById('corner-radius-mm').value)||0;
+    const sorted=[...splitScan.selectedTiles].sort((a,b)=>a-b);
+    let idx=slicedCards.length+1;
+    for(const i of sorted){
+        const col=i%splitScan.cols,row=Math.floor(i/splitScan.cols);
+        // Build a fake scan with no crop and full image
+        const fakeScan={cols:splitScan.cols,rows:splitScan.rows,cropLeft:0,cropTop:0,cropRight:0,cropBottom:0,cardWidthMM:splitScan.cardWidthMM,cardHeightMM:splitScan.cardHeightMM};
+        const s=sliceWithMargin(src,col,row,fakeScan,radiusMM);
+        slicedCards.push({
+            id:Date.now()+idx,idx,
+            suffix:String(idx).padStart(3,'0'),
+            name:`${currentPrefix}_${String(idx).padStart(3,'0')}`,
+            copies:1,
+            dataUrl:s.dataUrl,originalDataUrl:s.originalDataUrl,
+            w:s.w,h:s.h,marginPx:s.marginPx,offsetX:s.offsetX,offsetY:s.offsetY,
+            trim:{l:0,t:0,r:0,b:0,rot:0}
+        });
+        idx++;
+    }
+    renderReviewGrid();populateBackCardSelect();updateReviewBtn();
+    closeSplitModal();
+    document.getElementById('review-modal').classList.add('open');
+}
+
 /* ════ PDF CARD BACK ════ */
 function toggleCardBackOptions(){document.getElementById('card-back-options').classList.toggle('hidden',!document.getElementById('use-card-back').checked);}
 function switchBackSource(){const v=document.querySelector('input[name="back-source"]:checked').value;document.getElementById('back-upload-panel').classList.toggle('hidden',v!=='upload');document.getElementById('back-fromset-panel').classList.toggle('hidden',v!=='fromset');}
@@ -1075,9 +1552,73 @@ function populateBackCardSelect(){
 function previewBackFromSet(){const id=parseInt(document.getElementById('back-card-select').value);const c=slicedCards.find(sc=>sc.id===id);if(c){document.getElementById('back-fromset-preview').classList.remove('hidden');document.getElementById('back-fromset-img').src=c.dataUrl;}else document.getElementById('back-fromset-preview').classList.add('hidden');}
 function getCardBackDataUrl(){if(!document.getElementById('use-card-back').checked)return null;const src=document.querySelector('input[name="back-source"]:checked').value;if(src==='upload')return cardBackDataUrl;const id=parseInt(document.getElementById('back-card-select').value);const c=slicedCards.find(sc=>sc.id===id);return c?c.dataUrl:null;}
 
-/* ════ INDIVIDUAL EDIT (zoom+pan canvas) ════ */
+/* ════ EDIT MODAL CROP HANDLES ════ */
+let _editCropDrag=null;
+
+function renderEditCropHandles(){
+    const card=slicedCards.find(sc=>sc.id===editingCardId);if(!card)return;
+    const container=document.getElementById('edit-crop-handles');if(!container)return;
+    container.innerHTML='';
+    const canvas=document.getElementById('edit-canvas');
+    if(!canvas.width||!canvas.height)return;
+    container.style.width=canvas.width+'px';container.style.height=canvas.height+'px';
+    container.style.transform=`translate(${ePanX}px,${ePanY}px) scale(${eZoom})`;
+
+    const l=parseInt(document.getElementById('e-crop-l').value)||0;
+    const r=parseInt(document.getElementById('e-crop-r').value)||0;
+    const t=parseInt(document.getElementById('e-crop-t').value)||0;
+    const b=parseInt(document.getElementById('e-crop-b').value)||0;
+    const ox=card.offsetX||0, oy=card.offsetY||0;
+    // Handles are in oversized canvas coords
+    const cl=ox+l, ct=oy+t;
+    const effW=card.w-l-r, effH=card.h-t-b;
+    if(effW<=0||effH<=0)return;
+
+    const cx=cl+effW/2, cy=ct+effH/2;
+    const mk=(x,y,cls,type)=>{
+        const d=document.createElement('div');
+        d.className=`grid-handle ${cls}`;d.dataset.type=type;
+        d.style.left=x+'px';d.style.top=y+'px';
+        d.style.setProperty('--hz-inv',(1/eZoom).toFixed(5));
+        container.appendChild(d);
+    };
+    mk(cx,   ct,        'edge-h','top');
+    mk(cx,   ct+effH,   'edge-h','bottom');
+    mk(cl,   cy,        'edge-v','left');
+    mk(cl+effW, cy,     'edge-v','right');
+    mk(cl,      ct,     'corner nw','corner-tl');
+    mk(cl+effW, ct,     'corner ne','corner-tr');
+    mk(cl,      ct+effH,'corner sw','corner-bl');
+    mk(cl+effW, ct+effH,'corner br','corner-br');
+}
+
+document.getElementById('edit-canvas-wrap').addEventListener('mousedown',e=>{
+    const h=e.target.closest('.grid-handle');
+    if(h&&h.closest('#edit-crop-handles')){
+        e.preventDefault();e.stopPropagation();
+        const card=slicedCards.find(sc=>sc.id===editingCardId);if(!card)return;
+        // margins: how far the oversized canvas extends beyond each tile edge
+        const ox=card.offsetX||0, oy=card.offsetY||0;
+        const img=_editImgCache;
+        const marginL=ox, marginT=oy;
+        const marginR=img?(img.width-(ox+card.w)):0;
+        const marginB=img?(img.height-(oy+card.h)):0;
+        _editCropDrag={
+            type:h.dataset.type,
+            startClientX:e.clientX,startClientY:e.clientY,
+            startL:parseInt(document.getElementById('e-crop-l').value)||0,
+            startR:parseInt(document.getElementById('e-crop-r').value)||0,
+            startT:parseInt(document.getElementById('e-crop-t').value)||0,
+            startB:parseInt(document.getElementById('e-crop-b').value)||0,
+            cardW:card.w,cardH:card.h,
+            marginL,marginT,marginR,marginB
+        };
+        return;
+    }
+    // Normal pan
+    if(e.button===0){eIsPanning=true;eLastX=e.clientX;eLastY=e.clientY;editCanvasWrap.style.cursor='grabbing';}
+},{capture:false});
 const editCanvasWrap=document.getElementById('edit-canvas-wrap');
-editCanvasWrap.addEventListener('mousedown',e=>{if(e.button===0){eIsPanning=true;eLastX=e.clientX;eLastY=e.clientY;editCanvasWrap.style.cursor='grabbing';}});
 editCanvasWrap.addEventListener('touchstart',e=>{if(e.touches.length===1){eTouchState={x:e.touches[0].clientX,y:e.touches[0].clientY};e.preventDefault();}else if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;eTouchState={pinch:true,dist:Math.hypot(dx,dy),zoom:eZoom};e.preventDefault();}},{passive:false});
 editCanvasWrap.addEventListener('touchmove',e=>{
     if(!eTouchState)return;e.preventDefault();
@@ -1086,7 +1627,12 @@ editCanvasWrap.addEventListener('touchmove',e=>{
 },{passive:false});
 editCanvasWrap.addEventListener('touchend',e=>{if(e.touches.length===0)eTouchState=null;});
 function editZoomWheel(e){e.preventDefault();const f=e.deltaY<0?1.15:0.87;const c=document.getElementById('edit-canvas');if(!c.width)return;const w=editCanvasWrap;const fz=Math.min(w.clientWidth/c.width,w.clientHeight/c.height);const old=eZoom;eZoom=Math.max(fz*0.08,Math.min(eZoom*f,10));const rect=w.getBoundingClientRect();ePanX-=(e.clientX-rect.left-ePanX)*(eZoom/old-1);ePanY-=(e.clientY-rect.top-ePanY)*(eZoom/old-1);editApplyTransform();}
-function editApplyTransform(){const c=document.getElementById('edit-canvas');c.style.transform=`translate(${ePanX}px,${ePanY}px) scale(${eZoom})`;}
+function editApplyTransform(){
+    const c=document.getElementById('edit-canvas');
+    c.style.transform=`translate(${ePanX}px,${ePanY}px) scale(${eZoom})`;
+    const h=document.getElementById('edit-crop-handles');
+    if(h)h.style.transform=`translate(${ePanX}px,${ePanY}px) scale(${eZoom})`;
+}
 function editResetView(){const c=document.getElementById('edit-canvas');if(!c.width)return;const w=editCanvasWrap;eZoom=Math.min((w.clientWidth*.9)/c.width,(w.clientHeight*.9)/c.height);ePanX=(w.clientWidth-c.width*eZoom)/2;ePanY=(w.clientHeight-c.height*eZoom)/2;editApplyTransform();}
 
 function updateEditCropNum(side){
@@ -1126,15 +1672,19 @@ function openEditModal(id){
         const key={l:'e-crop-l',r:'e-crop-r',t:'e-crop-t',b:'e-crop-b'}[s];
         const trimKey={l:'l',r:'r',t:'t',b:'b'}[s];
         const maxVal=s==='l'||s==='r'?card.w:card.h;
-        document.getElementById(key).max=maxVal;document.getElementById(key).value=card.trim[trimKey];
-        document.getElementById(key+'-num').max=maxVal;document.getElementById(key+'-num').value=card.trim[trimKey];
-        document.getElementById(`e${s}-val`).textContent=card.trim[trimKey]+'px';
+        const negMin=-(card.marginPx||0); // allow expanding into the oversized margin
+        document.getElementById(key).min=negMin;document.getElementById(key+'-num').min=negMin;
+        document.getElementById(key).max=maxVal;document.getElementById(key).value=card.trim[trimKey]||0;
+        document.getElementById(key+'-num').max=maxVal;document.getElementById(key+'-num').value=card.trim[trimKey]||0;
+        document.getElementById(`e${s}-val`).textContent=(card.trim[trimKey]||0)+'px';
     });
     // Init rotation slider
     const rot=card.trim.rot||0;
     document.getElementById('e-rot').value=rot;
     document.getElementById('e-rot-num').value=rot;
     document.getElementById('erot-val').textContent=rot.toFixed(1)+'°';
+    // Invalidate edit image cache when switching cards
+    if(_editImgSrc!==card.originalDataUrl){_editImgCache=null;_editImgSrc='';}
     eZoom=1;ePanX=0;ePanY=0;
     updateEditCanvas();
     document.getElementById('edit-modal').classList.add('open');
@@ -1143,54 +1693,112 @@ function openEditModal(id){
         const c=document.getElementById('edit-canvas');
         if(!c.width)return;
         const w=editCanvasWrap;
-        const l=card.trim.l,t=card.trim.t,r=card.trim.r,b=card.trim.b;
+        const ox=card.offsetX||0, oy=card.offsetY||0;
+        const l=card.trim.l||0,t=card.trim.t||0,r=card.trim.r||0,b=card.trim.b||0;
         const cropW=card.w-l-r,cropH=card.h-t-b;
         if(cropW<=0||cropH<=0){editResetView();return;}
-        // Scale so the crop area fills 90% of the wrap
-        eZoom=Math.min((w.clientWidth*.9)/cropW,(w.clientHeight*.9)/cropH);
-        // Center on the crop area
-        ePanX=w.clientWidth/2 - (l+cropW/2)*eZoom;
-        ePanY=w.clientHeight/2 - (t+cropH/2)*eZoom;
+        // Fit the active crop area (in oversized coords) into 85% of the wrap
+        eZoom=Math.min((w.clientWidth*.85)/cropW,(w.clientHeight*.85)/cropH);
+        const activeCx=ox+l+cropW/2, activeCy=oy+t+cropH/2;
+        ePanX=w.clientWidth/2 - activeCx*eZoom;
+        ePanY=w.clientHeight/2 - activeCy*eZoom;
         editApplyTransform();
     });
 }
 function updateEditCanvas(){
+    if(_editRafPending)return;
+    const card=slicedCards.find(sc=>sc.id===editingCardId);if(!card)return;
+    const doRaf=()=>{_editRafPending=true;requestAnimationFrame(()=>{_editRafPending=false;_drawEditCanvas();});};
+    if(_editImgCache&&_editImgSrc===card.originalDataUrl){doRaf();}
+    else{const img=new Image();img.onload=()=>{_editImgCache=img;_editImgSrc=card.originalDataUrl;doRaf();};img.src=card.originalDataUrl;}
+}
+function _drawEditCanvas(){
     const card=slicedCards.find(sc=>sc.id===editingCardId);if(!card)return;
     const l=parseInt(document.getElementById('e-crop-l').value)||0;
     const r=parseInt(document.getElementById('e-crop-r').value)||0;
     const t=parseInt(document.getElementById('e-crop-t').value)||0;
     const b=parseInt(document.getElementById('e-crop-b').value)||0;
     const rotDeg=parseFloat(document.getElementById('e-rot').value)||0;
+
+    const img=_editImgCache;if(!img)return; // only called after cache is loaded
     const canvas=document.getElementById('edit-canvas'),ctx=canvas.getContext('2d');
-    const img=new Image();
-    img.onload=()=>{
-        canvas.width=card.w;canvas.height=card.h;ctx.clearRect(0,0,canvas.width,canvas.height);
-        // Full image dimmed as reference
-        ctx.globalAlpha=0.3;
+
+    // Canvas = full oversized image (shows neighbor material)
+    const ow=img.width, oh=img.height;
+    if(canvas.width!==ow||canvas.height!==oh){canvas.width=ow;canvas.height=oh;}
+    else{ctx.clearRect(0,0,ow,oh);}
+
+    const ox=card.offsetX||0, oy=card.offsetY||0;
+    const radiusMM=parseFloat(document.getElementById('corner-radius-mm').value)||0;
+    const px=card.w/(currentScan?currentScan.cardWidthMM:63);const pr=radiusMM*px;
+
+    // The active crop rect in CANVAS coords = tile-origin + trim
+    const cl=ox+l, ct=oy+t;
+    const effW=card.w-l-r, effH=card.h-t-b;
+    const hasEff=effW>0&&effH>0;
+
+    // Rotation pivot = centre of the clean tile in oversized-canvas coords
+    const pivX=ox+card.w/2, pivY=oy+card.h/2;
+    const applyRot=(ctx)=>{
         if(rotDeg!==0){
-            const cx=card.w/2,cy=card.h/2;
-            ctx.save();ctx.translate(cx,cy);ctx.rotate(rotDeg*Math.PI/180);ctx.drawImage(img,-cx,-cy);ctx.restore();
-        } else {ctx.drawImage(img,0,0);}
-        ctx.globalAlpha=1.0;
-        const effW=card.w-l-r,effH=card.h-t-b;
-        if(effW>0&&effH>0){
-            // Draw cropped+rotated region at full opacity
-            ctx.save();
-            ctx.beginPath();ctx.rect(l,t,effW,effH);ctx.clip();
-            if(rotDeg!==0){
-                const cx=card.w/2,cy=card.h/2;
-                ctx.translate(cx,cy);ctx.rotate(rotDeg*Math.PI/180);ctx.drawImage(img,-cx,-cy);
-            } else {ctx.drawImage(img,l,t,effW,effH,l,t,effW,effH);}
-            ctx.restore();
-            const radiusMM=parseFloat(document.getElementById('corner-radius-mm').value)||0;
-            const px=card.w/(currentScan?currentScan.cardWidthMM:63);const pr=radiusMM*px;
-            ctx.strokeStyle=pr>0.5?'#22c55e':'#3b82f6';ctx.lineWidth=Math.max(2,2/eZoom);
-            if(pr>0.5){ctx.beginPath();roundRectPath(ctx,l,t,effW,effH,pr);ctx.stroke();}
-            else{ctx.strokeRect(l,t,effW,effH);}
+            ctx.translate(pivX,pivY);
+            ctx.rotate(rotDeg*Math.PI/180);
+            ctx.translate(-pivX,-pivY);
         }
-        editApplyTransform();
     };
-    img.src=card.originalDataUrl;
+
+    // Step 1: Draw neighbor material dimly — rotated so it lines up correctly
+    ctx.save();
+    ctx.globalAlpha=0.35;
+    applyRot(ctx);
+    ctx.drawImage(img,0,0);
+    ctx.restore();
+
+    // Step 2: Draw tile area at medium brightness (rotated)
+    ctx.save();
+    ctx.beginPath();ctx.rect(ox,oy,card.w,card.h);ctx.clip();
+    ctx.globalAlpha=0.70;
+    applyRot(ctx);
+    ctx.drawImage(img,0,0);
+    ctx.restore();
+
+    // Step 3: Bright active-crop area (full opacity, rotated)
+    if(hasEff){
+        ctx.save();
+        ctx.beginPath();
+        if(pr>0.5){roundRectPath(ctx,cl,ct,effW,effH,pr);}else{ctx.rect(cl,ct,effW,effH);}
+        ctx.clip();
+        applyRot(ctx);
+        ctx.drawImage(img,0,0);
+        ctx.restore();
+    }
+
+    // Step 4: Dark overlay outside the active crop rect
+    ctx.save();
+    ctx.fillStyle='rgba(0,0,0,0.52)';
+    ctx.beginPath();
+    ctx.rect(0,0,ow,oh);
+    if(hasEff){
+        if(pr>0.5){roundRectPath(ctx,cl,ct,effW,effH,pr);}else{ctx.rect(cl,ct,effW,effH);}
+    }
+    ctx.fill('evenodd');
+    ctx.restore();
+
+    // Step 5: Tile-boundary dashed rectangle (grey, shows original tile edge)
+    ctx.save();
+    ctx.strokeStyle='rgba(148,163,184,0.55)';ctx.lineWidth=1.5;
+    ctx.setLineDash([4,3]);ctx.strokeRect(ox,oy,card.w,card.h);ctx.setLineDash([]);
+    ctx.restore();
+
+    // Step 6: Active crop border (green)
+    if(hasEff){
+        ctx.strokeStyle='#22c55e';ctx.lineWidth=Math.max(1.5,1.5/eZoom);
+        if(pr>0.5){ctx.beginPath();roundRectPath(ctx,cl,ct,effW,effH,pr);ctx.stroke();}
+        else{ctx.strokeRect(cl,ct,effW,effH);}
+    }
+
+    editApplyTransform();
+    renderEditCropHandles();
 }
 function saveIndividualCrop(){
     const card=slicedCards.find(sc=>sc.id===editingCardId);if(!card)return;
@@ -1199,8 +1807,12 @@ function saveIndividualCrop(){
     const t=parseInt(document.getElementById('e-crop-t').value)||0;
     const b=parseInt(document.getElementById('e-crop-b').value)||0;
     const rotDeg=parseFloat(document.getElementById('e-rot').value)||0;
-    const effW=card.w-l-r,effH=card.h-t-b;if(effW<=0||effH<=0){alert('Invalid crop dimensions');return;}
+
+    // Effective output size after trim
+    const effW=card.w-l-r, effH=card.h-t-b;
+    if(effW<=0||effH<=0){alert('Invalid crop dimensions');return;}
     card.trim={l,t,r,b,rot:rotDeg};
+
     const img=new Image();
     img.onload=()=>{
         const off=document.createElement('canvas');off.width=effW;off.height=effH;
@@ -1210,18 +1822,33 @@ function saveIndividualCrop(){
 
         ctx.save();
         if(pr>0.5){ctx.beginPath();roundRectPath(ctx,0,0,effW,effH,pr);ctx.clip();}
+
         if(rotDeg!==0){
-            // Rotate around the centre of the full card, then translate to crop origin
-            const cx=card.w/2-l,cy=card.h/2-t;
-            ctx.translate(cx,cy);ctx.rotate(rotDeg*Math.PI/180);ctx.translate(-card.w/2,-card.h/2);
-            ctx.drawImage(img,0,0);
+            // The oversized canvas has the tile centred at (offsetX + w/2, offsetY + h/2)
+            // We rotate around that centre, then crop out the trimmed area
+            const ox=card.offsetX||0, oy=card.offsetY||0;
+            // Centre of the clean tile in oversized canvas coords
+            const tcx=ox+card.w/2, tcy=oy+card.h/2;
+            // We want the output to show: clean tile with trim, rotated
+            // Translate so (l, t) inside the tile maps to (0,0) in output
+            ctx.translate(-l,-t);
+            ctx.translate(card.w/2, card.h/2);
+            ctx.rotate(rotDeg*Math.PI/180);
+            ctx.translate(-card.w/2, -card.h/2);
+            // Now draw the oversized image offset so the clean tile is at (0,0)
+            ctx.drawImage(img,-ox,-oy);
         } else {
-            ctx.drawImage(img,l,t,effW,effH,0,0,effW,effH);
+            // No rotation: just crop from oversized
+            const ox=card.offsetX||0, oy=card.offsetY||0;
+            ctx.drawImage(img,-(ox+l),-(oy+t));
         }
         ctx.restore();
 
         card.dataUrl=off.toDataURL('image/png');
-        renderReviewGrid();document.getElementById('edit-modal').classList.remove('open');
+        renderReviewGrid();
+        // Re-fit viewport on the new clean area
+        requestAnimationFrame(()=>{});
+        document.getElementById('edit-modal').classList.remove('open');
     };
     img.src=card.originalDataUrl;
 }
@@ -1419,3 +2046,4 @@ function addRoundedCardToPDF(doc,url,x,y,w,h,r){
 window.onload=()=>console.log('%c✅ Card Sheet Generator ready','color:#22c55e;font-weight:bold');
 </script>
 </body>
+</html>
