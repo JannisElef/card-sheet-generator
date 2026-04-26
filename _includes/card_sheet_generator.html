@@ -1,7 +1,7 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -131,6 +131,39 @@
             pointer-events:none;letter-spacing:.02em;
             box-shadow:0 2px 8px rgba(0,0,0,.5);
         }
+
+        /* Back-card badge */
+        .backcard-badge{
+            position:absolute;top:6px;left:6px;
+            background:rgba(15,23,42,.92);
+            border:1.5px solid #a78bfa;
+            color:#c4b5fd;
+            font-size:10px;font-weight:700;
+            padding:1px 6px;border-radius:20px;
+            pointer-events:none;
+            box-shadow:0 2px 8px rgba(0,0,0,.5);
+        }
+
+        /* Group color ring on review-card */
+        .review-card.group-ring-0{box-shadow:0 0 0 3px #ef4444,0 0 0 5px rgba(239,68,68,.2)!important;}
+        .review-card.group-ring-1{box-shadow:0 0 0 3px #3b82f6,0 0 0 5px rgba(59,130,246,.2)!important;}
+        .review-card.group-ring-2{box-shadow:0 0 0 3px #eab308,0 0 0 5px rgba(234,179,8,.2)!important;}
+        .review-card.group-ring-3{box-shadow:0 0 0 3px #a855f7,0 0 0 5px rgba(168,85,247,.2)!important;}
+        .review-card.group-ring-4{box-shadow:0 0 0 3px #22c55e,0 0 0 5px rgba(34,197,94,.2)!important;}
+
+        /* Group assign popup */
+        #group-assign-popup{
+            position:fixed;z-index:10000;background:#1e293b;border:1px solid #334155;
+            border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.7);padding:10px;
+            min-width:200px;display:none;
+        }
+        #group-assign-popup.open{display:block;}
+        .group-color-dot{
+            width:18px;height:18px;border-radius:50%;flex-shrink:0;display:inline-block;
+            border:2px solid rgba(255,255,255,.25);cursor:pointer;transition:transform .1s;
+        }
+        .group-color-dot:hover{transform:scale(1.25);}
+        .group-color-dot.active{border-color:#fff!important;transform:scale(1.15);}
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200" style="height:100dvh;display:flex;flex-direction:column;overflow:hidden;">
@@ -374,11 +407,11 @@
                     <div class="space-y-2">
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="radio" name="back-source" value="fromset" id="back-fromset-radio" checked onchange="switchBackSource()" class="accent-emerald-500">
-                            <span class="text-xs text-slate-300">Pick card from set</span>
+                            <span class="text-xs text-slate-300">Pick card from set (global fallback)</span>
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="radio" name="back-source" value="upload" id="back-upload-radio" onchange="switchBackSource()" class="accent-emerald-500">
-                            <span class="text-xs text-slate-300">Upload image</span>
+                            <span class="text-xs text-slate-300">Upload image (global fallback)</span>
                         </label>
                     </div>
                     <div id="back-fromset-panel">
@@ -392,6 +425,13 @@
                         <div id="back-upload-preview" class="mt-2 hidden"><img id="back-upload-img" class="w-16 h-auto rounded border border-slate-700 checker-bg"></div>
                     </div>
                     <div class="text-xs text-slate-500">Back pages are mirrored horizontally for duplex flip-on-long-edge printing.</div>
+
+                    <!-- Per-group back card assignment -->
+                    <div class="pt-1 border-t border-slate-700/50">
+                        <div class="text-xs font-semibold text-slate-400 mb-2">Per-group back cards <span class="font-normal text-slate-500">(overrides global)</span></div>
+                        <div id="group-back-assign-list" class="space-y-2"></div>
+                        <div class="text-xs text-slate-600 mt-1.5">Assign a card marked 🔙 to each colour group. Cards in that group will use it as back.</div>
+                    </div>
                 </div>
 
                 <button onclick="generatePDF()" id="pdf-gen-btn" class="w-full px-4 py-2 bg-emerald-700 hover:bg-emerald-600 rounded-xl font-semibold transition-colors text-sm">
@@ -540,10 +580,23 @@
     </div>
 </div>
 
+<!-- GROUP ASSIGN POPUP -->
+<div id="group-assign-popup">
+    <div style="font-size:11px;font-weight:600;color:#94a3b8;margin-bottom:7px;letter-spacing:.05em;">ASSIGN GROUP</div>
+    <div id="group-color-row" style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;"></div>
+    <div style="font-size:10px;color:#64748b;margin-bottom:6px;">Mark as back-side card:</div>
+    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;">
+        <input type="checkbox" id="group-popup-backcard" onchange="toggleBackCardFromPopup()" class="accent-violet-500" style="width:14px;height:14px;">
+        <span style="color:#c4b5fd;">🔙 This is a back card</span>
+    </label>
+    <div style="font-size:10px;color:#64748b;margin-top:6px;line-height:1.4;">Back cards won't appear as fronts in PDF export.</div>
+</div>
+
 <!-- CARD CONTEXT MENU -->
 <div id="card-ctx-menu">
     <div class="ctx-item" onclick="ctxRename()">✏️ Rename</div>
     <div class="ctx-item" onclick="ctxEdit()">✂️ Edit Crop</div>
+    <div class="ctx-item" onclick="ctxAssignGroup(event)">🎨 Assign Group / Back</div>
     <div class="ctx-item" id="ctx-copies-row" style="gap:6px;padding:6px 8px;">
         <span style="font-size:13px;">🔢</span>
         <span style="flex:1;font-size:12px;">Copies</span>
@@ -566,6 +619,14 @@ let ctxCardId=null;
 let tilePad={left:0,right:0,top:0,bottom:0};
 // Edit canvas perf: cache the loaded image, throttle redraws with RAF
 let _editImgCache=null, _editImgSrc='', _editRafPending=false;
+
+/* ════ GROUPS ════ */
+// 5 colour groups: each can have a back-card id assigned
+const GROUP_COLORS=['#ef4444','#3b82f6','#eab308','#a855f7','#22c55e'];
+const GROUP_NAMES=['Red','Blue','Yellow','Purple','Green'];
+// backGroups[groupId] = card id used as back, or null
+let backGroups=[null,null,null,null,null];
+let _groupPopupCardId=null;
 
 function updateTilePad(){
     ['left','right','top','bottom'].forEach(d=>{
@@ -1229,6 +1290,14 @@ function renderReviewGrid(){
         div.className='review-card cursor-pointer select-none';
         div.dataset.cardId=card.id;
 
+        // Group color ring
+        const gi=card.groupId;
+        if(gi!=null&&gi>=0&&gi<GROUP_COLORS.length){
+            div.classList.add(`group-ring-${gi}`);
+        }
+        // Dim back-cards slightly
+        if(card.isBackCard) div.style.opacity='0.72';
+
         // ── Image wrapper ──
         const imgWrap=document.createElement('div');
         imgWrap.className='relative checker-bg rounded-t-xl flex items-center justify-center overflow-hidden';
@@ -1243,12 +1312,29 @@ function renderReviewGrid(){
         badge.textContent=`×${card.copies||1}`;badge.style.display=(card.copies||1)>1?'block':'none';
         imgWrap.appendChild(badge);
 
-        // ── Hover overlay: copies ± and edit button ──
+        // Back-card badge
+        if(card.isBackCard){
+            const bb=document.createElement('div');
+            bb.className='backcard-badge';bb.textContent='🔙 back';
+            imgWrap.appendChild(bb);
+        }
+
+        // Group dot indicator (bottom-left corner of image area)
+        if(gi!=null&&gi>=0&&gi<GROUP_COLORS.length){
+            const gd=document.createElement('div');
+            gd.style.cssText=`position:absolute;bottom:5px;left:5px;width:10px;height:10px;border-radius:50%;background:${GROUP_COLORS[gi]};border:2px solid rgba(255,255,255,.7);pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.5);`;
+            imgWrap.appendChild(gd);
+        }
+
+        // ── Hover overlay: copies ± and edit button + group assign ──
         const hover=document.createElement('div');
-        hover.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;opacity:0;transition:opacity .15s;background:rgba(2,6,23,.55);border-radius:inherit;';
+        hover.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;opacity:0;transition:opacity .15s;background:rgba(2,6,23,.55);border-radius:inherit;';
         hover.innerHTML=`
             <button class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-semibold transition-colors w-24"
                 onclick="event.stopPropagation();openEditModal(${card.id})">✂️ Edit</button>
+            <button class="px-3 py-1 rounded-xl text-xs font-semibold transition-colors w-24"
+                style="background:${gi!=null?GROUP_COLORS[gi]+'cc':'#334155'};border:1px solid rgba(255,255,255,.15);"
+                onclick="event.stopPropagation();openGroupAssignFromHover(${card.id},this)">🎨 Group${gi!=null?' '+GROUP_NAMES[gi]:''}</button>
             <div class="flex items-center gap-2">
                 <button style="width:26px;height:26px;border-radius:8px;background:#334155;border:1px solid #475569;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;"
                     onclick="event.stopPropagation();hoverChangeCopies(${card.id},-1)">−</button>
@@ -1284,6 +1370,23 @@ function renderReviewGrid(){
         div.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();openCardCtxMenu(card.id,e);});
         grid.appendChild(div);
     });
+}
+
+function openGroupAssignFromHover(cardId, anchorEl){
+    _groupPopupCardId=cardId;
+    initGroupColorRow();
+    const card=slicedCards.find(sc=>sc.id===cardId);
+    document.querySelectorAll('.group-color-dot').forEach(d=>{
+        d.classList.toggle('active',card&&parseInt(d.dataset.gi)===(card.groupId??-1));
+    });
+    document.getElementById('group-popup-backcard').checked=!!(card&&card.isBackCard);
+    const popup=document.getElementById('group-assign-popup');
+    popup.classList.add('open');
+    const rect=anchorEl.getBoundingClientRect();
+    let left=rect.left,top=rect.bottom+4;
+    if(left+210>window.innerWidth)left=window.innerWidth-214;
+    if(top+160>window.innerHeight)top=rect.top-164;
+    popup.style.left=left+'px';popup.style.top=top+'px';
 }
 
 function hoverChangeCopies(id,delta){
@@ -1381,6 +1484,72 @@ function ctxDelete(){
     slicedCards=slicedCards.filter(c=>c.id!==id);
     renderReviewGrid();populateBackCardSelect();updateReviewBtn();
 }
+
+/* ════ GROUP ASSIGN ════ */
+function initGroupColorRow(){
+    const row=document.getElementById('group-color-row');row.innerHTML='';
+    GROUP_COLORS.forEach((col,gi)=>{
+        const dot=document.createElement('span');
+        dot.className='group-color-dot';dot.title=GROUP_NAMES[gi];
+        dot.style.background=col;dot.dataset.gi=gi;
+        dot.addEventListener('click',()=>assignGroupToCard(gi));
+        row.appendChild(dot);
+    });
+    // "No group" clear button
+    const clr=document.createElement('span');
+    clr.title='Remove group';clr.style.cssText='width:18px;height:18px;border-radius:50%;background:#334155;border:2px solid #475569;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:#94a3b8;flex-shrink:0;transition:transform .1s;';
+    clr.textContent='✕';clr.addEventListener('click',()=>assignGroupToCard(null));
+    row.appendChild(clr);
+}
+function openGroupAssignPopup(cardId, anchorEl){
+    _groupPopupCardId=cardId;
+    initGroupColorRow();
+    const card=slicedCards.find(sc=>sc.id===cardId);
+    // Highlight active group
+    document.querySelectorAll('.group-color-dot').forEach(d=>{
+        d.classList.toggle('active',card&&d.dataset.gi!=null&&parseInt(d.dataset.gi)===(card.groupId??-1));
+    });
+    document.getElementById('group-popup-backcard').checked=!!(card&&card.isBackCard);
+    const popup=document.getElementById('group-assign-popup');
+    popup.classList.add('open');
+    const rect=anchorEl?anchorEl.getBoundingClientRect():{left:window.innerWidth/2,bottom:window.innerHeight/2,width:0};
+    let left=rect.left,top=rect.bottom+4;
+    if(left+210>window.innerWidth)left=window.innerWidth-214;
+    if(top+160>window.innerHeight)top=rect.top-164;
+    popup.style.left=left+'px';popup.style.top=top+'px';
+}
+function assignGroupToCard(groupId){
+    const card=slicedCards.find(sc=>sc.id===_groupPopupCardId);if(!card)return;
+    card.groupId=(groupId===null)?undefined:groupId;
+    renderReviewGrid();populateBackCardSelect();
+    // update dot highlights
+    document.querySelectorAll('.group-color-dot').forEach(d=>{
+        d.classList.toggle('active',groupId!==null&&parseInt(d.dataset.gi)===groupId);
+    });
+}
+function toggleBackCardFromPopup(){
+    const card=slicedCards.find(sc=>sc.id===_groupPopupCardId);if(!card)return;
+    card.isBackCard=document.getElementById('group-popup-backcard').checked;
+    renderReviewGrid();populateBackCardSelect();
+}
+function ctxAssignGroup(e){
+    const id=ctxCardId;
+    closeCardCtxMenu();
+    // Use the review-card element as anchor
+    const el=document.querySelector(`.review-card[data-card-id="${id}"]`);
+    openGroupAssignPopup(id, el);
+}
+// Close group popup on outside click
+document.addEventListener('click',e=>{
+    if(!e.target.closest('#group-assign-popup')&&!e.target.closest('.review-card')){
+        document.getElementById('group-assign-popup').classList.remove('open');
+        _groupPopupCardId=null;
+    }
+});
+// Also on Escape
+document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){document.getElementById('group-assign-popup').classList.remove('open');_groupPopupCardId=null;}
+},{capture:false});
 
 function updateCardSuffix(id,val){
     const c=slicedCards.find(sc=>sc.id===id);
@@ -1547,7 +1716,43 @@ function switchBackSource(){const v=document.querySelector('input[name="back-sou
 function handleCardBackUpload(e){const f=e.target.files[0];if(!f)return;const reader=new FileReader();reader.onload=ev=>{cardBackDataUrl=ev.target.result;document.getElementById('back-upload-preview').classList.remove('hidden');document.getElementById('back-upload-img').src=cardBackDataUrl;};reader.readAsDataURL(f);}
 function populateBackCardSelect(){
     const sel=document.getElementById('back-card-select');sel.innerHTML='<option value="">— choose card —</option>';
-    slicedCards.forEach(c=>{const opt=document.createElement('option');opt.value=c.id;opt.textContent=`${currentPrefix}_${c.suffix}`;sel.appendChild(opt);});
+    slicedCards.forEach(c=>{const opt=document.createElement('option');opt.value=c.id;opt.textContent=`${currentPrefix}_${c.suffix}${c.isBackCard?' 🔙':''}`;sel.appendChild(opt);});
+    renderGroupBackAssignList();
+}
+
+function renderGroupBackAssignList(){
+    const container=document.getElementById('group-back-assign-list');if(!container)return;
+    container.innerHTML='';
+    const backCards=slicedCards.filter(c=>c.isBackCard);
+    GROUP_COLORS.forEach((col,gi)=>{
+        const row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;gap:6px;';
+        const dot=document.createElement('span');
+        dot.style.cssText=`width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0;border:1.5px solid rgba(255,255,255,.3);`;
+        const lbl=document.createElement('span');
+        lbl.textContent=GROUP_NAMES[gi];
+        lbl.style.cssText='font-size:11px;color:#94a3b8;min-width:46px;';
+        const sel=document.createElement('select');
+        sel.style.cssText='flex:1;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:3px 6px;font-size:11px;color:#e2e8f0;';
+        sel.innerHTML='<option value="">— none —</option>';
+        backCards.forEach(bc=>{
+            const opt=document.createElement('option');
+            opt.value=bc.id;opt.textContent=`${currentPrefix}_${bc.suffix}`;
+            if(backGroups[gi]===bc.id)opt.selected=true;
+            sel.appendChild(opt);
+        });
+        sel.addEventListener('change',()=>{
+            const v=parseInt(sel.value);backGroups[gi]=isNaN(v)?null:v;
+        });
+        row.appendChild(dot);row.appendChild(lbl);row.appendChild(sel);
+        container.appendChild(row);
+    });
+    if(backCards.length===0){
+        const hint=document.createElement('div');
+        hint.style.cssText='font-size:10px;color:#64748b;font-style:italic;';
+        hint.textContent='No back cards yet — mark a card as 🔙 back via right-click or hover.';
+        container.appendChild(hint);
+    }
 }
 function previewBackFromSet(){const id=parseInt(document.getElementById('back-card-select').value);const c=slicedCards.find(sc=>sc.id===id);if(c){document.getElementById('back-fromset-preview').classList.remove('hidden');document.getElementById('back-fromset-img').src=c.dataUrl;}else document.getElementById('back-fromset-preview').classList.add('hidden');}
 function getCardBackDataUrl(){if(!document.getElementById('use-card-back').checked)return null;const src=document.querySelector('input[name="back-source"]:checked').value;if(src==='upload')return cardBackDataUrl;const id=parseInt(document.getElementById('back-card-select').value);const c=slicedCards.find(sc=>sc.id===id);return c?c.dataUrl:null;}
@@ -1922,16 +2127,20 @@ async function generatePDF(){
     const cardW=currentScan?currentScan.cardWidthMM:63,cardH=currentScan?currentScan.cardHeightMM:88;
     const radiusMM=Math.max(0,parseFloat(document.getElementById('corner-radius-mm').value)||0);
     const batchLabel=document.getElementById('pdf-batch-label').value.trim();
-    const backUrl=getCardBackDataUrl();
+    const globalBackUrl=getCardBackDataUrl();
+
+    // Only front cards (not marked isBackCard) go into the sheet
+    const frontCards=slicedCards.filter(c=>!c.isBackCard);
 
     // Expand cards by copies count
     const expandedCards=[];
-    slicedCards.forEach(card=>{const n=card.copies||1;for(let c=0;c<n;c++)expandedCards.push(card);});
+    frontCards.forEach(card=>{const n=card.copies||1;for(let c=0;c<n;c++)expandedCards.push(card);});
+
+    if(expandedCards.length===0){btn.textContent='Generate PDF Preview';btn.disabled=false;alert('No front cards to export — all cards are marked as back cards.');return;}
 
     const pageW=297,pageH=210; // A4 landscape
-    const margin=8,gap=3,namePad=5; // mm below card for filename
+    const margin=8,gap=3,namePad=5;
 
-    // Best-fit layout on A4 landscape
     const cols=Math.floor((pageW-margin*2+gap)/(cardW+gap));
     const rows=Math.floor((pageH-margin*2+gap)/(cardH+gap+namePad));
     const cardsPerPage=Math.max(1,cols*rows);
@@ -1940,12 +2149,24 @@ async function generatePDF(){
 
     const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
 
+    // Helper: resolve back URL for a card (per-group back card > global)
+    function resolveBackUrl(card){
+        const gi=card.groupId;
+        if(gi!=null&&gi>=0&&gi<GROUP_COLORS.length){
+            const backId=backGroups[gi];
+            if(backId!=null){
+                const bc=slicedCards.find(sc=>sc.id===backId&&sc.isBackCard);
+                if(bc)return bc.dataUrl;
+            }
+        }
+        return globalBackUrl;
+    }
+
     let cidx=0;
     while(cidx<expandedCards.length){
         if(cidx>0)doc.addPage();
         const pageCards=expandedCards.slice(cidx,cidx+cardsPerPage);
 
-        // Page label top-center
         if(batchLabel){
             doc.setFontSize(7);doc.setTextColor(150,150,150);
             doc.text(batchLabel,pageW/2,4,{align:'center'});
@@ -1956,24 +2177,29 @@ async function generatePDF(){
             const c=i%cols,r=Math.floor(i/cols);
             const x=startX+c*(cardW+gap),y=startY+r*(cardH+namePad+gap);
             addRoundedCardToPDF(doc,pageCards[i].dataUrl,x,y,cardW,cardH,radiusMM);
-            // filename under card
             doc.setFontSize(5);doc.setTextColor(120,130,140);
             doc.text(`${currentPrefix}_${pageCards[i].suffix}`,x+cardW/2,y+cardH+namePad-1,{align:'center'});
         }
 
-        // Back page
-        if(backUrl){
+        // Back page — exactly one back page per front page.
+        // Each card slot gets its own resolved back image at the mirrored column position.
+        // Only emit a back page if at least one card on this page has a back.
+        const pageBackPairs=pageCards.map((card,i)=>({i,card,backUrl:resolveBackUrl(card)}));
+        const anyBack=pageBackPairs.some(p=>p.backUrl);
+        if(anyBack){
             doc.addPage();
             if(batchLabel){doc.setFontSize(7);doc.setTextColor(150,150,150);doc.text(batchLabel+' — Back',pageW/2,4,{align:'center'});}
-            for(let i=0;i<pageCards.length;i++){
+            for(const{i,card,backUrl} of pageBackPairs){
+                if(!backUrl)continue;
                 const colFront=i%cols,r=Math.floor(i/cols);
-                const colBack=cols-1-colFront;
+                const colBack=cols-1-colFront; // mirror for duplex flip-on-long-edge
                 const x=startX+colBack*(cardW+gap),y=startY+r*(cardH+namePad+gap);
                 addRoundedCardToPDF(doc,backUrl,x,y,cardW,cardH,radiusMM);
                 doc.setFontSize(5);doc.setTextColor(120,130,140);
-                doc.text(`${currentPrefix}_${pageCards[i].suffix}`,x+cardW/2,y+cardH+namePad-1,{align:'center'});
+                doc.text(`${currentPrefix}_${card.suffix}`,x+cardW/2,y+cardH+namePad-1,{align:'center'});
             }
         }
+
         cidx+=cardsPerPage;
     }
 
@@ -1984,7 +2210,6 @@ async function generatePDF(){
         let sy=m;
         const setH=(s,bold=false)=>{doc.setFontSize(s);doc.setFont('helvetica',bold?'bold':'normal');};
         const txt=(t,x=m,indent=0)=>{doc.setTextColor(60,60,60);doc.text(t,x+indent,sy);sy+=lh;};
-        const txtSmall=(t,x=m,indent=0)=>{doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(100,100,100);doc.text(t,x+indent,sy);sy+=4.5;};
         const hr=()=>{doc.setDrawColor(200,200,200);doc.setLineWidth(0.2);doc.line(m,sy-1,pageW-m,sy-1);sy+=1;};
 
         setH(14,true);doc.setTextColor(30,30,30);
@@ -1993,7 +2218,7 @@ async function generatePDF(){
 
         setH(9,true);txt(`Set Prefix: ${currentPrefix}`);
         setH(8);
-        txt(`Total unique cards: ${slicedCards.length}   Total with copies: ${expandedCards.length}`);
+        txt(`Total front cards: ${frontCards.length}   With copies: ${expandedCards.length}   Back cards: ${slicedCards.filter(c=>c.isBackCard).length}`);
         if(batchLabel)txt(`Batch label: ${batchLabel}`);
         sy+=2;
 
@@ -2015,7 +2240,6 @@ async function generatePDF(){
 
         setH(9,true);txt('Cards');hr();
         setH(7);
-        // Two-column card list
         const colW=(pageW-m*2)/2;
         let col=0;const startSY=sy;
         slicedCards.forEach((c,i)=>{
@@ -2024,7 +2248,9 @@ async function generatePDF(){
             const copies=(c.copies||1)>1?` ×${c.copies}`:'';
             const trim=hasTrim?` [L${c.trim.l} R${c.trim.r} T${c.trim.t} B${c.trim.b}]`:'';
             const rotStr=hasRot?` rot:${c.trim.rot}°`:'';
-            const line=`${String(i+1).padStart(3,'0')}. ${currentPrefix}_${c.suffix}${copies}${trim}${rotStr}`;
+            const groupStr=c.groupId!=null?` [${GROUP_NAMES[c.groupId]}]`:'';
+            const backStr=c.isBackCard?' [BACK]':'';
+            const line=`${String(i+1).padStart(3,'0')}. ${currentPrefix}_${c.suffix}${copies}${trim}${rotStr}${groupStr}${backStr}`;
             doc.setTextColor(60,60,60);doc.setFont('helvetica','normal');
             doc.text(line,m+col*colW,sy,{maxWidth:colW-4});
             sy+=4;
