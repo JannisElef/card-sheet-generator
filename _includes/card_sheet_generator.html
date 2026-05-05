@@ -178,7 +178,7 @@
         <h1 class="text-base font-semibold whitespace-nowrap">Card Sheet Generator</h1>
     </div>
     <div class="flex items-center gap-2 flex-shrink-0">
-        <label title="Import JSON set" class="w-9 h-9 flex items-center justify-center bg-slate-800 hover:bg-slate-700 rounded-xl cursor-pointer transition-colors flex-shrink-0" style="border:1px solid #334155;">
+        <label title="Import Settings" class="w-9 h-9 flex items-center justify-center bg-slate-800 hover:bg-slate-700 rounded-xl cursor-pointer transition-colors flex-shrink-0" style="border:1px solid #334155;">
             <!-- Download/save to disk: tray with arrow pointing down INTO it -->
             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-3"/><polyline points="8 13 12 17 16 13"/><line x1="12" y1="17" x2="12" y2="7"/></svg>
             <input type="file" accept=".json,application/json" class="hidden" onchange="importSetJSON(event)">
@@ -389,8 +389,8 @@
         </div>
 
         <!-- RIGHT: export -->
-        <div class="w-full md:w-80 flex flex-col bg-slate-900 flex-shrink-0" style="min-height:0;">
-            <div class="p-5 space-y-4 flex-shrink-0 overflow-y-auto">
+        <div class="w-full md:w-80 flex flex-col bg-slate-900 flex-shrink-0" style="min-height:0;overflow-y:auto;">
+            <div class="p-5 space-y-4">
                 <h3 class="font-semibold text-emerald-400">📦 Export Options</h3>
 
                 <button onclick="exportReviewZIP()" class="w-full px-4 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-semibold transition-colors text-sm">
@@ -398,17 +398,17 @@
                 </button>
 
                 <hr class="border-slate-800">
-                <h3 class="font-semibold text-slate-300">💾 Set JSON</h3>
+                <h3 class="font-semibold text-slate-300">💾 Settings</h3>
                 <div class="flex gap-2">
                     <button onclick="exportSetJSON()" class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs font-semibold transition-colors" style="border:1px solid #334155;">
                         <!-- Share/upload: arrow pointing up out of a box -->
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-                        Export JSON
+                        Export Settings
                     </button>
                     <label class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs font-semibold transition-colors cursor-pointer" style="border:1px solid #334155;">
                         <!-- Save to disk: monitor with arrow down into it -->
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-3"/><polyline points="8 13 12 17 16 13"/><line x1="12" y1="17" x2="12" y2="7"/></svg>
-                        Import JSON
+                        Import Settings
                         <input type="file" accept=".json,application/json" class="hidden" onchange="importSetJSON(event)">
                     </label>
                 </div>
@@ -417,13 +417,66 @@
                 <hr class="border-slate-800">
                 <h3 class="font-semibold text-slate-300">📄 PDF Print Sheet</h3>
 
-        <div>
-                    <label class="block text-xs text-slate-400 mb-1">Batch / page label</label>
-                    <input id="pdf-batch-label" type="text" placeholder="e.g. Nature Pack Vol.1" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm">
+                <!-- Layout controls -->
+                <div class="space-y-2">
+                    <div class="text-xs font-semibold text-slate-400">Page Layout</div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs text-slate-500">Margin (mm)</label>
+                            <input id="pdf-margin" type="number" value="8" min="0" max="30" step="0.1" oninput="refreshLayoutPreview()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs mt-0.5">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-500">Card gap (mm)</label>
+                            <input id="pdf-gap" type="number" value="3" min="0" max="20" step="0.1" oninput="refreshLayoutPreview()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs mt-0.5">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-300">
+                            <input type="checkbox" id="pdf-show-names" checked onchange="refreshLayoutPreview()" class="accent-emerald-500"> Card names
+                        </label>
+                        <div>
+                            <label class="text-xs text-slate-500">Name pad (mm)</label>
+                            <input id="pdf-name-pad" type="number" value="5" min="0" max="15" step="0.1" oninput="refreshLayoutPreview()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs mt-0.5">
+                        </div>
+                    </div>
+                    <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-300">
+                        <input type="checkbox" id="pdf-show-footer" checked onchange="refreshLayoutPreview()" class="accent-emerald-500"> Page footer (set name + index A, B… ZZ)
+                    </label>
+                    <div class="flex items-center gap-2 pt-1">
+                        <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-300 flex-shrink-0">
+                            <input type="checkbox" id="card-border-on" checked onchange="document.getElementById('card-border-opts').classList.toggle('hidden',!this.checked);refreshLayoutPreview()" class="accent-emerald-500"> Card border
+                        </label>
+                        <div id="card-border-opts" class="flex items-center gap-2 flex-1">
+                            <input type="color" id="card-border-color" value="#000000" onchange="refreshLayoutPreview()" title="Border color" class="w-7 h-7 rounded cursor-pointer border border-slate-600 flex-shrink-0" style="padding:1px 2px;background:#1e293b;">
+                            <input type="number" id="card-border-width" value="1" min="0.5" max="10" step="0.5" onchange="refreshLayoutPreview()" title="Width (px in image, pt in PDF)" class="w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-center text-xs" placeholder="px">
+                            <span class="text-xs text-slate-600 flex-shrink-0">px / pt</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live layout preview canvas -->
+                <div>
+                    <div class="text-xs text-slate-500 mb-1">Layout preview <span id="preview-layout-info" class="text-slate-600"></span></div>
+                    <canvas id="pdf-layout-canvas" style="width:100%;border-radius:8px;border:1px solid #334155;background:#fff;display:block;cursor:pointer;" title="Click to refresh" onclick="refreshLayoutPreview()"></canvas>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Set name / batch label</label>
+                    <input id="pdf-batch-label" type="text" placeholder="e.g. Nature Pack Vol.1" oninput="refreshLayoutPreview()" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm">
+                </div>
+
+                <!-- Export mode -->
+                <div class="space-y-1">
+                    <div class="text-xs font-semibold text-slate-400">Export mode</div>
+                    <div class="flex flex-col gap-1">
+                        <label class="flex items-center gap-2 text-xs cursor-pointer"><input type="radio" name="pdf-mode" value="both" checked onchange="refreshLayoutPreview()" class="accent-emerald-500"> Front + Back (duplex)</label>
+                        <label class="flex items-center gap-2 text-xs cursor-pointer"><input type="radio" name="pdf-mode" value="front" onchange="refreshLayoutPreview()" class="accent-emerald-500"> Front only</label>
+                        <label class="flex items-center gap-2 text-xs cursor-pointer"><input type="radio" name="pdf-mode" value="back" onchange="refreshLayoutPreview()" class="accent-emerald-500"> Back only</label>
+                    </div>
                 </div>
 
                 <label class="flex items-center gap-2 cursor-pointer select-none">
-                    <input type="checkbox" id="use-card-back" onchange="toggleCardBackOptions()" class="w-4 h-4 accent-emerald-500 rounded">
+                    <input type="checkbox" id="use-card-back" onchange="toggleCardBackOptions();refreshLayoutPreview();" class="w-4 h-4 accent-emerald-500 rounded">
                     <span class="text-sm text-slate-300">Use Card Back (double-sided)</span>
                 </label>
 
@@ -458,17 +511,44 @@
                     </div>
                 </div>
 
-                <button onclick="generatePDF()" id="pdf-gen-btn" class="w-full px-4 py-2 bg-emerald-700 hover:bg-emerald-600 rounded-xl font-semibold transition-colors text-sm">
-                    Generate PDF Preview
-                </button>
+                <!-- Generate PDF buttons -->
+                <div class="flex gap-2">
+                    <button onclick="generatePDF()" id="pdf-gen-btn" class="flex-1 px-3 py-2 bg-emerald-700 hover:bg-emerald-600 rounded-xl font-semibold transition-colors text-xs flex items-center justify-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Generate PDF
+                    </button>
+                    <button onclick="openPdfPopup()" id="pdf-view-btn" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl font-semibold transition-colors text-xs hidden flex items-center gap-1.5" style="border:1px solid #334155;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        View
+                    </button>
+                </div>
 
-                <button onclick="openPdfPopup()" id="pdf-view-btn" class="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl font-semibold transition-colors text-sm hidden" style="border:1px solid #334155;">
-                    👁 View Preview
-                </button>
+                <!-- Image export -->
+                <div class="space-y-2 pt-1 border-t border-slate-800">
+                    <div class="text-xs font-semibold text-slate-400">Export as Image (JPG/PNG)</div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs text-slate-500">Format</label>
+                            <select id="img-export-format" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs mt-0.5">
+                                <option value="jpeg">JPG</option>
+                                <option value="png" selected>PNG</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-500">DPI</label>
+                            <input id="img-export-dpi" type="number" value="300" min="72" max="600" step="1" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs mt-0.5">
+                        </div>
+                    </div>
+                    <button onclick="exportAsImages()" id="img-export-btn" class="w-full px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl font-semibold transition-colors text-xs flex items-center justify-center gap-1.5" style="border:1px solid #475569;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        Export Pages as Images
+                    </button>
+                    <div class="text-xs text-slate-600">Downloads a ZIP with one image per sheet page.</div>
+                </div>
 
                 <label class="flex items-center gap-2 cursor-pointer select-none">
                     <input type="checkbox" id="pdf-summary-page" checked class="w-4 h-4 accent-emerald-500 rounded">
-                    <span class="text-xs text-slate-300">Include summary page (last)</span>
+                    <span class="text-xs text-slate-300">Include summary page (last, PDF only)</span>
                 </label>
             </div>
 
@@ -553,26 +633,38 @@
     <div class="modal-inner" style="max-width:1100px;">
         <div class="px-5 py-3 border-b border-slate-800 bg-slate-900 flex items-center justify-between flex-shrink-0">
             <div>
-                <div class="text-base font-semibold">Fine-tune Crop</div>
+                <div class="text-base font-semibold">Edit Card</div>
                 <div id="edit-card-name-display" class="text-xs text-slate-400 mt-0.5"></div>
             </div>
-            <button onclick="document.getElementById('edit-modal').classList.remove('open')" class="w-8 h-8 flex items-center justify-center bg-slate-700 hover:bg-slate-600 rounded-xl">✕</button>
+            <div class="flex items-center gap-2">
+                <!-- Tab switcher -->
+                <div class="flex rounded-xl overflow-hidden border border-slate-700 text-xs font-semibold">
+                    <button id="edit-tab-crop" onclick="switchEditTab('crop')" class="px-3 py-1.5 bg-slate-600 text-white transition-colors">✂️ Crop</button>
+                    <button id="edit-tab-paint" onclick="switchEditTab('paint')" class="px-3 py-1.5 bg-slate-800 text-slate-400 hover:bg-slate-700 transition-colors">🖌️ Paint</button>
+                </div>
+                <button onclick="document.getElementById('edit-modal').classList.remove('open')" class="w-8 h-8 flex items-center justify-center bg-slate-700 hover:bg-slate-600 rounded-xl">✕</button>
+            </div>
         </div>
         <div class="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
-            <!-- Zoomable/pannable canvas — takes all available space -->
+            <!-- Canvas area -->
             <div class="bg-slate-950 flex flex-col p-3 min-w-0" style="flex:1 1 0;min-height:220px;">
                 <div id="edit-canvas-wrap" onwheel="editZoomWheel(event)" style="flex:1;min-height:0;">
                     <canvas id="edit-canvas"></canvas>
                     <div id="edit-crop-handles" style="position:absolute;top:0;left:0;width:0;height:0;transform-origin:0 0;pointer-events:none;z-index:35;"></div>
+                    <!-- Paint layer canvas — transparent, same logical size as card, composited on save -->
+                    <canvas id="paint-layer" style="position:absolute;top:0;left:0;transform-origin:0 0;display:none;pointer-events:none;z-index:30;image-rendering:pixelated;"></canvas>
+                    <!-- Invisible hit area for paint mode — above everything for input -->
+                    <div id="paint-hit" style="position:absolute;inset:0;display:none;cursor:none;z-index:50;touch-action:none;"></div>
+                    <!-- Brush cursor circle -->
+                    <div id="paint-cursor" style="position:fixed;pointer-events:none;z-index:9999;display:none;border-radius:50%;border:1.5px solid rgba(255,255,255,0.9);box-shadow:0 0 0 1px rgba(0,0,0,0.6);transform:translate(-50%,-50%);transition:width .05s,height .05s;"></div>
                 </div>
                 <div class="flex gap-2 mt-2 flex-shrink-0">
                     <button onclick="editResetView()" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs">Fit</button>
-                    <span class="text-xs text-slate-500 self-center">Scroll to zoom · Drag to pan</span>
+                    <span id="edit-hint-text" class="text-xs text-slate-500 self-center">Scroll to zoom · Drag to pan</span>
                 </div>
             </div>
-            <!-- Controls — scrollable on mobile, full height sidebar on desktop -->
-            <div class="w-full md:w-80 bg-slate-900 flex flex-col p-4 gap-3 flex-shrink-0 overflow-y-auto md:overflow-y-auto" style="max-height:none;" id="edit-controls-panel">
-                <!-- Rotation -->
+            <!-- CROP PANEL -->
+            <div id="edit-panel-crop" class="w-full md:w-80 bg-slate-900 flex flex-col p-4 gap-3 flex-shrink-0 overflow-y-auto" style="max-height:none;">
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <span class="text-xs uppercase tracking-widest text-slate-400">Rotation</span>
@@ -589,9 +681,7 @@
                                oninput="updateEditRotationFromNum()">
                     </div>
                 </div>
-
                 <hr class="border-slate-800">
-
                 <div class="text-xs uppercase tracking-widest text-slate-400">Trim (px)</div>
                 <div>
                     <div class="flex items-center justify-between mb-1"><label class="text-xs text-slate-400">Left</label><span id="el-val" class="text-xs text-slate-300 font-mono">0</span></div>
@@ -623,9 +713,82 @@
                 </div>
                 <button onclick="saveIndividualCrop()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-semibold mt-auto">Save Crop</button>
             </div>
+            <!-- PAINT PANEL -->
+            <div id="edit-panel-paint" class="w-full md:w-80 bg-slate-900 flex flex-col p-4 gap-4 flex-shrink-0 overflow-y-auto hidden" style="max-height:none;">
+                <!-- Tool -->
+                <div>
+                    <div class="text-xs uppercase tracking-widest text-slate-400 mb-2">Tool</div>
+                    <div class="flex gap-2 flex-wrap">
+                        <button id="paint-tool-brush" onclick="setPaintTool('brush')" class="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white transition-colors">✏️ Brush</button>
+                        <button id="paint-tool-airbrush" onclick="setPaintTool('airbrush')" class="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors">💨 Airbrush</button>
+                        <button id="paint-tool-eraser" onclick="setPaintTool('eraser')" class="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors flex items-center justify-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16l12-12 5 5z"/><line x1="6" y1="17" x2="17" y2="6"/></svg>
+                            Eraser
+                        </button>
+                    </div>
+                </div>
+                <!-- Color -->
+                <div>
+                    <div class="text-xs uppercase tracking-widest text-slate-400 mb-2">Color</div>
+                    <div class="flex items-center gap-2">
+                        <div style="width:36px;height:36px;border-radius:8px;border:1.5px solid #475569;background:var(--pc,#ff0000);flex-shrink:0;" id="paint-color-preview"></div>
+                        <input type="color" id="paint-color" value="#ff0000"
+                            oninput="document.getElementById('paint-color-preview').style.background=this.value"
+                            onchange="document.getElementById('paint-color-preview').style.background=this.value;paintAddLastUsed(this.value)"
+                            class="w-9 h-9 rounded-lg cursor-pointer border border-slate-600 flex-shrink-0" style="padding:2px;background:#1e293b;">
+                        <button id="paint-tool-eyedropper" onclick="setPaintTool('eyedropper')" title="Pick color from image" class="w-9 h-9 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors flex items-center justify-center flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.3l-7-7-9.3 9.4L7 17l1.4 1.4a2 2 0 0 0 2.8 0l.8-.8 4 4a2 2 0 0 0 2.8-2.8l-4-4 .8-.8a2 2 0 0 0 0-2.7z"/><line x1="2" y1="22" x2="7" y2="17"/></svg>
+                        </button>
+                        <div>
+                            <div class="text-xs text-slate-500 mb-1">Last used</div>
+                            <div id="paint-last-used" class="flex gap-1 flex-wrap" style="min-height:18px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Brush size -->
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs uppercase tracking-widest text-slate-400">Brush size</span>
+                        <span id="paint-size-val" class="text-xs text-slate-300 font-mono">20 px</span>
+                    </div>
+                    <input type="range" id="paint-size" min="2" max="200" value="20" step="1" oninput="document.getElementById('paint-size-val').textContent=this.value+' px';updatePaintCursor()" class="w-full accent-blue-500">
+                </div>
+                <!-- Opacity -->
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs uppercase tracking-widest text-slate-400">Opacity</span>
+                        <span id="paint-opacity-val" class="text-xs text-slate-300 font-mono">80%</span>
+                    </div>
+                    <input type="range" id="paint-opacity" min="1" max="100" value="80" step="1" oninput="document.getElementById('paint-opacity-val').textContent=this.value+'%'" class="w-full accent-blue-500">
+                </div>
+                <!-- Airbrush flow -->
+                <div id="paint-flow-row" style="display:none;">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs uppercase tracking-widest text-slate-400">Flow (airbrush)</span>
+                        <span id="paint-flow-val" class="text-xs text-slate-300 font-mono">8%</span>
+                    </div>
+                    <input type="range" id="paint-flow" min="1" max="30" value="8" step="1" oninput="document.getElementById('paint-flow-val').textContent=this.value+'%'" class="w-full accent-blue-500">
+                </div>
+                <div class="flex gap-2 mt-auto">
+                    <button onclick="undoPaint()" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+                        Undo
+                    </button>
+                    <button onclick="resetPaint()" class="flex-1 py-2 bg-red-900/60 hover:bg-red-800/60 rounded-xl text-xs font-semibold text-red-300">Reset</button>
+                </div>
+                <button onclick="savePaint()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-semibold text-sm">Save Paint</button>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(2,6,23,.82);flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+    <div style="width:44px;height:44px;border:3px solid #334155;border-top-color:#10b981;border-radius:50%;animation:spin .7s linear infinite;"></div>
+    <div id="loading-msg" style="color:#e2e8f0;font-size:14px;font-weight:600;letter-spacing:.01em;">Loading…</div>
+    <div id="loading-sub" style="color:#64748b;font-size:12px;"></div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
 <!-- GROUP ASSIGN POPUP -->
 <div id="group-assign-popup">
@@ -748,14 +911,12 @@ function processFile(file){
 }
 
 /* ════ IMAGE PARAMS ════ */
-// Reset only image params (brightness/contrast/sat/hue/crop), NOT viewport
+// Reset only colour params (brightness/contrast/saturation/hue)
 function resetImageParams(){
     if(!currentScan)return;
-    Object.assign(currentScan,{brightness:100,contrast:100,saturation:100,hue:0,
-        cropLeft:0,cropTop:0,cropRight:0,cropBottom:0,rotation:0});
+    Object.assign(currentScan,{brightness:100,contrast:100,saturation:100,hue:0});
     syncAllControls();
-    document.getElementById('rotation-label').textContent='0°';
-    updatePreview(); // redraws without touching pan/zoom
+    updatePreview();
 }
 function rotateImage(deg){
     if(!currentScan)return;
@@ -1224,7 +1385,7 @@ function popupDeselectAll(){if(!currentScan)return;currentScan.selectedTiles.cle
 
 /* ════ SLICE & REVIEW ════ */
 function openReviewIfPossible(){
-    if(slicedCards.length>0)document.getElementById('review-modal').classList.add('open');
+    if(slicedCards.length>0){document.getElementById('review-modal').classList.add('open');refreshLayoutPreview();}
 }
 function updateReviewBtn(){
     const btn=document.getElementById('review-btn');const count=slicedCards.length;
@@ -1304,7 +1465,7 @@ function sliceCardsAndReview(){
         idx++;
     }
     renderReviewGrid();populateBackCardSelect();updateReviewBtn();
-    document.getElementById('review-modal').classList.add('open');
+    document.getElementById('review-modal').classList.add('open');refreshLayoutPreview();
 }
 
 /* Import individual card images directly */
@@ -1754,7 +1915,7 @@ function splitSliceAndAppend(){
     }
     renderReviewGrid();populateBackCardSelect();updateReviewBtn();
     closeSplitModal();
-    document.getElementById('review-modal').classList.add('open');
+    document.getElementById('review-modal').classList.add('open');refreshLayoutPreview();
 }
 
 /* ════ PDF CARD BACK ════ */
@@ -1771,7 +1932,16 @@ function renderGroupBackAssignList(){
     const container=document.getElementById('group-back-assign-list');if(!container)return;
     container.innerHTML='';
     const backCards=slicedCards.filter(c=>c.isBackCard);
-    GROUP_COLORS.forEach((col,gi)=>{
+    // Only show groups that are actually used by at least one card
+    const usedGroups=new Set(slicedCards.map(c=>c.groupId).filter(g=>g!=null&&g>=0&&g<GROUP_COLORS.length));
+    if(usedGroups.size===0){
+        const hint=document.createElement('div');
+        hint.style.cssText='font-size:10px;color:#64748b;font-style:italic;';
+        hint.textContent='No groups assigned yet - use the group button on cards first.';
+        container.appendChild(hint);return;
+    }
+    usedGroups.forEach(gi=>{
+        const col=GROUP_COLORS[gi];
         const row=document.createElement('div');
         row.style.cssText='display:flex;align-items:center;gap:6px;';
         const dot=document.createElement('span');
@@ -1781,25 +1951,24 @@ function renderGroupBackAssignList(){
         lbl.style.cssText='font-size:11px;color:#94a3b8;min-width:46px;';
         const sel=document.createElement('select');
         sel.style.cssText='flex:1;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:3px 6px;font-size:11px;color:#e2e8f0;';
-        sel.innerHTML='<option value="">— none —</option>';
+        sel.innerHTML='<option value="">- none -</option>';
         backCards.forEach(bc=>{
             const opt=document.createElement('option');
             opt.value=bc.id;opt.textContent=`${currentPrefix}_${bc.suffix}`;
             if(backGroups[gi]===bc.id)opt.selected=true;
             sel.appendChild(opt);
         });
+        if(backCards.length===0){
+            const opt=document.createElement('option');
+            opt.value='';opt.textContent='- mark a card as back first -';opt.disabled=true;
+            sel.appendChild(opt);
+        }
         sel.addEventListener('change',()=>{
             const v=parseInt(sel.value);backGroups[gi]=isNaN(v)?null:v;
         });
         row.appendChild(dot);row.appendChild(lbl);row.appendChild(sel);
         container.appendChild(row);
     });
-    if(backCards.length===0){
-        const hint=document.createElement('div');
-        hint.style.cssText='font-size:10px;color:#64748b;font-style:italic;';
-        hint.textContent='No back cards yet — mark a card as 🔙 back via right-click or hover.';
-        container.appendChild(hint);
-    }
 }
 function previewBackFromSet(){const id=parseInt(document.getElementById('back-card-select').value);const c=slicedCards.find(sc=>sc.id===id);if(c){document.getElementById('back-fromset-preview').classList.remove('hidden');document.getElementById('back-fromset-img').src=c.dataUrl;}else document.getElementById('back-fromset-preview').classList.add('hidden');}
 function getCardBackDataUrl(){if(!document.getElementById('use-card-back').checked)return null;const src=document.querySelector('input[name="back-source"]:checked').value;if(src==='upload')return cardBackDataUrl;const id=parseInt(document.getElementById('back-card-select').value);const c=slicedCards.find(sc=>sc.id===id);return c?c.dataUrl:null;}
@@ -1867,8 +2036,11 @@ document.getElementById('edit-canvas-wrap').addEventListener('mousedown',e=>{
         };
         return;
     }
-    // Normal pan
-    if(e.button===0){eIsPanning=true;eLastX=e.clientX;eLastY=e.clientY;editCanvasWrap.style.cursor='grabbing';}
+    // Normal pan — blocked in paint mode
+    if(e.button===0){
+        if(document.getElementById('paint-hit')?.style.display==='block')return;
+        eIsPanning=true;eLastX=e.clientX;eLastY=e.clientY;editCanvasWrap.style.cursor='grabbing';
+    }
 },{capture:false});
 const editCanvasWrap=document.getElementById('edit-canvas-wrap');
 editCanvasWrap.addEventListener('touchstart',e=>{if(e.touches.length===1){eTouchState={x:e.touches[0].clientX,y:e.touches[0].clientY};e.preventDefault();}else if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;eTouchState={pinch:true,dist:Math.hypot(dx,dy),zoom:eZoom};e.preventDefault();}},{passive:false});
@@ -1884,6 +2056,12 @@ function editApplyTransform(){
     c.style.transform=`translate(${ePanX}px,${ePanY}px) scale(${eZoom})`;
     const h=document.getElementById('edit-crop-handles');
     if(h)h.style.transform=`translate(${ePanX}px,${ePanY}px) scale(${eZoom})`;
+    // Keep paint layer in sync
+    const pl=document.getElementById('paint-layer');
+    if(pl&&pl.style.display!=='none'){
+        pl.style.transform=`translate(${ePanX}px,${ePanY}px) scale(${eZoom})`;
+        pl.style.left=c.style.left||'0';pl.style.top=c.style.top||'0';
+    }
 }
 function editResetView(){const c=document.getElementById('edit-canvas');if(!c.width)return;const w=editCanvasWrap;eZoom=Math.min((w.clientWidth*.9)/c.width,(w.clientHeight*.9)/c.height);ePanX=(w.clientWidth-c.width*eZoom)/2;ePanY=(w.clientHeight-c.height*eZoom)/2;editApplyTransform();}
 
@@ -2052,6 +2230,40 @@ function _drawEditCanvas(){
     editApplyTransform();
     renderEditCropHandles();
 }
+// Applies card.trim to card.originalDataUrl → updates card.dataUrl. Returns a Promise.
+function applyCardTrimAsync(card){
+    return new Promise(res=>{
+        if(!card.trim||(card.trim.l===0&&card.trim.t===0&&card.trim.r===0&&card.trim.b===0&&!card.trim.rot)){
+            res(false);return; // nothing to apply
+        }
+        const l=card.trim.l||0,r=card.trim.r||0,t=card.trim.t||0,b=card.trim.b||0;
+        const rotDeg=card.trim.rot||0;
+        const effW=card.w-l-r, effH=card.h-t-b;
+        if(effW<=0||effH<=0){res(false);return;}
+        const img=new Image();
+        img.onload=()=>{
+            const off=document.createElement('canvas');off.width=effW;off.height=effH;
+            const ctx=off.getContext('2d');
+            const radiusMM=parseFloat(document.getElementById('corner-radius-mm').value)||0;
+            const px=card.w/(currentScan?currentScan.cardWidthMM:63);const pr=radiusMM*px;
+            ctx.save();
+            if(pr>0.5){ctx.beginPath();roundRectPath(ctx,0,0,effW,effH,pr);ctx.clip();}
+            if(rotDeg!==0){
+                ctx.translate(-l,-t);ctx.translate(card.w/2,card.h/2);
+                ctx.rotate(rotDeg*Math.PI/180);ctx.translate(-card.w/2,-card.h/2);
+                ctx.drawImage(img,-(card.offsetX||0),-(card.offsetY||0));
+            } else {
+                ctx.drawImage(img,-((card.offsetX||0)+l),-((card.offsetY||0)+t));
+            }
+            ctx.restore();
+            card.dataUrl=off.toDataURL('image/png');
+            res(true);
+        };
+        img.onerror=()=>res(false);
+        img.src=card.originalDataUrl;
+    });
+}
+
 function saveIndividualCrop(){
     const card=slicedCards.find(sc=>sc.id===editingCardId);if(!card)return;
     const l=parseInt(document.getElementById('e-crop-l').value)||0;
@@ -2060,49 +2272,15 @@ function saveIndividualCrop(){
     const b=parseInt(document.getElementById('e-crop-b').value)||0;
     const rotDeg=parseFloat(document.getElementById('e-rot').value)||0;
 
-    // Effective output size after trim
     const effW=card.w-l-r, effH=card.h-t-b;
     if(effW<=0||effH<=0){alert('Invalid crop dimensions');return;}
     card.trim={l,t,r,b,rot:rotDeg};
 
-    const img=new Image();
-    img.onload=()=>{
-        const off=document.createElement('canvas');off.width=effW;off.height=effH;
-        const ctx=off.getContext('2d');
-        const radiusMM=parseFloat(document.getElementById('corner-radius-mm').value)||0;
-        const px=card.w/(currentScan?currentScan.cardWidthMM:63);const pr=radiusMM*px;
-
-        ctx.save();
-        if(pr>0.5){ctx.beginPath();roundRectPath(ctx,0,0,effW,effH,pr);ctx.clip();}
-
-        if(rotDeg!==0){
-            // The oversized canvas has the tile centred at (offsetX + w/2, offsetY + h/2)
-            // We rotate around that centre, then crop out the trimmed area
-            const ox=card.offsetX||0, oy=card.offsetY||0;
-            // Centre of the clean tile in oversized canvas coords
-            const tcx=ox+card.w/2, tcy=oy+card.h/2;
-            // We want the output to show: clean tile with trim, rotated
-            // Translate so (l, t) inside the tile maps to (0,0) in output
-            ctx.translate(-l,-t);
-            ctx.translate(card.w/2, card.h/2);
-            ctx.rotate(rotDeg*Math.PI/180);
-            ctx.translate(-card.w/2, -card.h/2);
-            // Now draw the oversized image offset so the clean tile is at (0,0)
-            ctx.drawImage(img,-ox,-oy);
-        } else {
-            // No rotation: just crop from oversized
-            const ox=card.offsetX||0, oy=card.offsetY||0;
-            ctx.drawImage(img,-(ox+l),-(oy+t));
-        }
-        ctx.restore();
-
-        card.dataUrl=off.toDataURL('image/png');
+    applyCardTrimAsync(card).then(()=>{
         renderReviewGrid();
-        // Re-fit viewport on the new clean area
         requestAnimationFrame(()=>{});
         document.getElementById('edit-modal').classList.remove('open');
-    };
-    img.src=card.originalDataUrl;
+    });
 }
 
 /* ════ ZIP EXPORT with summary TXT ════ */
@@ -2165,158 +2343,366 @@ async function exportReviewZIP(){
     const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(content),download:`${currentPrefix}_cards.zip`});a.click();
 }
 
+/* ════ PDF / LAYOUT HELPERS ════ */
+
+// Convert page index (0-based pair index) → label: 0→A, 1→B … 25→Z, 26→AA … 701→ZZ
+function pageIndexLabel(n){
+    const A=65,Z=26;
+    if(n<Z)return String.fromCharCode(A+n);
+    const hi=Math.floor(n/Z)-1,lo=n%Z;
+    if(hi<Z)return String.fromCharCode(A+hi)+String.fromCharCode(A+lo);
+    return '??';
+}
+
+function getLayoutParams(){
+    const cardW=currentScan?currentScan.cardWidthMM:63;
+    const cardH=currentScan?currentScan.cardHeightMM:88;
+    const _n=(id,def)=>{const v=parseFloat(document.getElementById(id)?.value);return isNaN(v)?def:v;};
+    const margin=Math.max(0,_n('pdf-margin',8));
+    const gap=Math.max(0,_n('pdf-gap',3));
+    const showNames=document.getElementById('pdf-show-names')?.checked??true;
+    const namePad=showNames?Math.max(0,_n('pdf-name-pad',5)):0;
+    const showFooter=document.getElementById('pdf-show-footer')?.checked??true;
+    const footerH=showFooter?6:0;
+    const pageW=297,pageH=210;
+    const cols=Math.max(1,Math.floor((pageW-margin*2+gap)/(cardW+gap)));
+    const rows=Math.max(1,Math.floor((pageH-margin*2-footerH+gap)/(cardH+gap+(showNames?namePad:0))));
+    const cardsPerPage=cols*rows;
+    const gridW=cols*cardW+(cols-1)*gap;
+    const gridH=rows*(cardH+(showNames?namePad:0))+(rows-1)*gap;
+    const startX=(pageW-gridW)/2;
+    const startY=(pageH-footerH-gridH)/2;
+    return {cardW,cardH,margin,gap,showNames,namePad,showFooter,footerH,pageW,pageH,cols,rows,cardsPerPage,startX,startY,gridW,gridH};
+}
+
+function resolveBackUrl(card){
+    const globalBackUrl=getCardBackDataUrl();
+    const gi=card.groupId;
+    if(gi!=null&&gi>=0&&gi<GROUP_COLORS.length){
+        const backId=backGroups[gi];
+        if(backId!=null){
+            const bc=slicedCards.find(sc=>sc.id===backId&&sc.isBackCard);
+            if(bc)return bc.dataUrl;
+        }
+    }
+    return globalBackUrl;
+}
+
+/* Live layout preview on canvas */
+let _previewRaf=null;
+function refreshLayoutPreview(){
+    if(_previewRaf)cancelAnimationFrame(_previewRaf);
+    _previewRaf=requestAnimationFrame(_drawLayoutPreview);
+}
+
+function _drawLayoutPreview(){
+    const cvs=document.getElementById('pdf-layout-canvas');if(!cvs)return;
+    const lp=getLayoutParams();
+    const {cardW,cardH,margin,gap,showNames,namePad,showFooter,footerH,pageW,pageH,cols,rows,cardsPerPage,startX,startY}=lp;
+
+    const dispW=cvs.parentElement.clientWidth||280;
+    const scale=dispW/pageW;
+    cvs.width=Math.round(pageW*scale);
+    cvs.height=Math.round(pageH*scale);
+    cvs.style.width=dispW+'px';
+    cvs.style.height=Math.round(pageH*scale)+'px';
+
+    const ctx=cvs.getContext('2d');
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    ctx.fillStyle='#ffffff';ctx.fillRect(0,0,cvs.width,cvs.height);
+
+    const frontCards=slicedCards.filter(c=>!c.isBackCard);
+    const expanded=[];
+    frontCards.forEach(c=>{for(let i=0;i<(c.copies||1);i++)expanded.push(c);});
+
+    for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+            const idx=r*cols+c;
+            const x=(startX+c*(cardW+gap))*scale;
+            const y=(startY+r*(cardH+(showNames?namePad:0)+gap))*scale;
+            const w=cardW*scale,h=cardH*scale;
+
+            if(idx<expanded.length&&expanded[idx].dataUrl){
+                const img=new Image();
+                img.src=expanded[idx].dataUrl;
+                ctx.save();ctx.beginPath();_roundRect(ctx,x,y,w,h,3*scale);ctx.clip();
+                if(img.complete&&img.naturalWidth>0){ctx.drawImage(img,x,y,w,h);}
+                else{ctx.fillStyle='#e2e8f0';ctx.fillRect(x,y,w,h);img.onload=()=>refreshLayoutPreview();}
+                ctx.restore();
+            } else {
+                ctx.fillStyle=idx<expanded.length?'#dbeafe':'#f1f5f9';
+                ctx.beginPath();_roundRect(ctx,x,y,w,h,3*scale);ctx.fill();
+            }
+
+            // Slot border (light grey always, then user border on top)
+            ctx.strokeStyle='#94a3b8';ctx.lineWidth=0.5*scale;
+            ctx.beginPath();_roundRect(ctx,x,y,w,h,3*scale);ctx.stroke();
+
+            // User card border preview
+            const bp=getBorderParams();
+            if(bp){
+                ctx.strokeStyle=bp.color;ctx.lineWidth=bp.width*scale*0.264583;
+                ctx.beginPath();_roundRect(ctx,x,y,w,h,3*scale);ctx.stroke();
+            }
+
+            // Card name label
+            if(showNames&&idx<expanded.length){
+                ctx.fillStyle='#64748b';
+                ctx.font=`${Math.max(5,namePad*scale*0.55)}px monospace`;
+                ctx.textAlign='center';
+                ctx.fillText(`${currentPrefix}_${expanded[idx].suffix}`,x+w/2,y+h+namePad*scale*0.75,w);
+            }
+        }
+    }
+
+    // Margin guides
+    ctx.strokeStyle='rgba(99,102,241,0.25)';ctx.lineWidth=0.5;ctx.setLineDash([3,3]);
+    ctx.strokeRect(margin*scale,margin*scale,(pageW-margin*2)*scale,(pageH-margin*2)*scale);
+    ctx.setLineDash([]);
+
+    // Footer
+    if(showFooter){
+        const fy=(pageH-footerH/2)*scale;
+        const label=document.getElementById('pdf-batch-label')?.value.trim()||currentPrefix||'Set';
+        ctx.fillStyle='#94a3b8';
+        ctx.font=`${Math.max(5,5*scale)}px sans-serif`;
+        ctx.textAlign='center';
+        ctx.fillText(`${label}  ·  A`,pageW/2*scale,fy);
+    }
+
+    // Info text
+    const mode=document.querySelector('input[name="pdf-mode"]:checked')?.value||'both';
+    document.getElementById('preview-layout-info').textContent=
+        `${cols}×${rows} = ${cardsPerPage}/page · ${Math.ceil(expanded.length/cardsPerPage)} front page(s) · mode: ${mode}`;
+}
+
+function _roundRect(ctx,x,y,w,h,r){
+    ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+}
+
 /* ════ PDF EXPORT ════ */
 async function generatePDF(){
     if(slicedCards.length===0)return;
-    const btn=document.getElementById('pdf-gen-btn');btn.textContent='⏳ Generating...';btn.disabled=true;
+    const btn=document.getElementById('pdf-gen-btn');
+    const origTxt=btn.innerHTML;btn.innerHTML='⏳ Generating…';btn.disabled=true;
 
     const{jsPDF}=window.jspdf;
-    const cardW=currentScan?currentScan.cardWidthMM:63,cardH=currentScan?currentScan.cardHeightMM:88;
+    const lp=getLayoutParams();
+    const {cardW,cardH,gap,showNames,namePad,showFooter,footerH,pageW,pageH,cols,rows,cardsPerPage,startX,startY}=lp;
     const radiusMM=Math.max(0,parseFloat(document.getElementById('corner-radius-mm').value)||0);
     const batchLabel=document.getElementById('pdf-batch-label').value.trim();
-    const globalBackUrl=getCardBackDataUrl();
+    const mode=document.querySelector('input[name="pdf-mode"]:checked')?.value||'both';
 
-    // Only front cards (not marked isBackCard) go into the sheet
     const frontCards=slicedCards.filter(c=>!c.isBackCard);
-
-    // Expand cards by copies count
     const expandedCards=[];
-    frontCards.forEach(card=>{const n=card.copies||1;for(let c=0;c<n;c++)expandedCards.push(card);});
+    frontCards.forEach(card=>{for(let c=0;c<(card.copies||1);c++)expandedCards.push(card);});
 
-    if(expandedCards.length===0){btn.textContent='Generate PDF Preview';btn.disabled=false;alert('No front cards to export — all cards are marked as back cards.');return;}
-
-    const pageW=297,pageH=210; // A4 landscape
-    const margin=8,gap=3,namePad=5;
-
-    const cols=Math.floor((pageW-margin*2+gap)/(cardW+gap));
-    const rows=Math.floor((pageH-margin*2+gap)/(cardH+gap+namePad));
-    const cardsPerPage=Math.max(1,cols*rows);
-    const startX=(pageW-(cols*cardW+(cols-1)*gap))/2;
-    const startY=(pageH-(rows*(cardH+namePad)+(rows-1)*gap))/2;
+    if(expandedCards.length===0){btn.innerHTML=origTxt;btn.disabled=false;alert('No front cards to export.');return;}
 
     const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    let pairIdx=0; // used for page index label A, B, C…
+    let firstPage=true;
 
-    // Helper: resolve back URL for a card (per-group back card > global)
-    function resolveBackUrl(card){
-        const gi=card.groupId;
-        if(gi!=null&&gi>=0&&gi<GROUP_COLORS.length){
-            const backId=backGroups[gi];
-            if(backId!=null){
-                const bc=slicedCards.find(sc=>sc.id===backId&&sc.isBackCard);
-                if(bc)return bc.dataUrl;
-            }
-        }
-        return globalBackUrl;
-    }
+    const drawFooter=(doc,label,isBack)=>{
+        if(!showFooter)return;
+        const lbl=`${batchLabel||currentPrefix||'Set'}  ·  ${pageIndexLabel(pairIdx)}${isBack?' (Back)':''}`;
+        doc.setFontSize(6);doc.setTextColor(160,160,160);doc.setFont('helvetica','normal');
+        doc.text(lbl,pageW/2,pageH-1.5,{align:'center'});
+    };
 
     let cidx=0;
     while(cidx<expandedCards.length){
-        if(cidx>0)doc.addPage();
         const pageCards=expandedCards.slice(cidx,cidx+cardsPerPage);
 
-        if(batchLabel){
-            doc.setFontSize(7);doc.setTextColor(150,150,150);
-            doc.text(batchLabel,pageW/2,4,{align:'center'});
+        // ── Front page ──
+        if(mode==='both'||mode==='front'){
+            if(!firstPage)doc.addPage();firstPage=false;
+            for(let i=0;i<pageCards.length;i++){
+                if(!pageCards[i].dataUrl)continue;
+                const c=i%cols,r=Math.floor(i/cols);
+                const x=startX+c*(cardW+gap),y=startY+r*(cardH+(showNames?namePad:0)+gap);
+                addRoundedCardToPDF(doc,pageCards[i].dataUrl,x,y,cardW,cardH,radiusMM);
+                if(showNames){
+                    doc.setFontSize(5);doc.setTextColor(120,130,140);
+                    doc.text(`${currentPrefix}_${pageCards[i].suffix}`,x+cardW/2,y+cardH+namePad-1,{align:'center'});
+                }
+            }
+            drawFooter(doc,batchLabel,false);
         }
 
-        // Front cards
-        for(let i=0;i<pageCards.length;i++){
-            const c=i%cols,r=Math.floor(i/cols);
-            const x=startX+c*(cardW+gap),y=startY+r*(cardH+namePad+gap);
-            addRoundedCardToPDF(doc,pageCards[i].dataUrl,x,y,cardW,cardH,radiusMM);
-            doc.setFontSize(5);doc.setTextColor(120,130,140);
-            doc.text(`${currentPrefix}_${pageCards[i].suffix}`,x+cardW/2,y+cardH+namePad-1,{align:'center'});
-        }
-
-        // Back page — exactly one back page per front page.
-        // Each card slot gets its own resolved back image at the mirrored column position.
-        // Only emit a back page if at least one card on this page has a back.
-        const pageBackPairs=pageCards.map((card,i)=>({i,card,backUrl:resolveBackUrl(card)}));
-        const anyBack=pageBackPairs.some(p=>p.backUrl);
-        if(anyBack){
-            doc.addPage();
-            if(batchLabel){doc.setFontSize(7);doc.setTextColor(150,150,150);doc.text(batchLabel+' — Back',pageW/2,4,{align:'center'});}
-            for(const{i,card,backUrl} of pageBackPairs){
-                if(!backUrl)continue;
-                const colFront=i%cols,r=Math.floor(i/cols);
-                const colBack=cols-1-colFront; // mirror for duplex flip-on-long-edge
-                const x=startX+colBack*(cardW+gap),y=startY+r*(cardH+namePad+gap);
-                addRoundedCardToPDF(doc,backUrl,x,y,cardW,cardH,radiusMM);
-                doc.setFontSize(5);doc.setTextColor(120,130,140);
-                doc.text(`${currentPrefix}_${card.suffix}`,x+cardW/2,y+cardH+namePad-1,{align:'center'});
+        // ── Back page ──
+        if(mode==='both'||mode==='back'){
+            const pageBackPairs=pageCards.map((card,i)=>({i,card,backUrl:resolveBackUrl(card)}));
+            const anyBack=pageBackPairs.some(p=>p.backUrl);
+            if(anyBack){
+                if(!firstPage)doc.addPage();firstPage=false;
+                for(const{i,card,backUrl} of pageBackPairs){
+                    if(!backUrl)continue;
+                    const colFront=i%cols,r=Math.floor(i/cols);
+                    const colBack=cols-1-colFront;
+                    const x=startX+colBack*(cardW+gap),y=startY+r*(cardH+(showNames?namePad:0)+gap);
+                    addRoundedCardToPDF(doc,backUrl,x,y,cardW,cardH,radiusMM);
+                    if(showNames){
+                        doc.setFontSize(5);doc.setTextColor(120,130,140);
+                        doc.text(`${currentPrefix}_${card.suffix}`,x+cardW/2,y+cardH+namePad-1,{align:'center'});
+                    }
+                }
+                drawFooter(doc,batchLabel,true);
             }
         }
 
+        pairIdx++;
         cidx+=cardsPerPage;
     }
 
-    // Optional summary page (last)
+    // Summary page
     if(document.getElementById('pdf-summary-page').checked){
-        doc.addPage();
-        const m=12, lh=5.5;
-        let sy=m;
+        if(!firstPage)doc.addPage();
+        const m=12,lh=5.5;let sy=m;
         const setH=(s,bold=false)=>{doc.setFontSize(s);doc.setFont('helvetica',bold?'bold':'normal');};
         const txt=(t,x=m,indent=0)=>{doc.setTextColor(60,60,60);doc.text(t,x+indent,sy);sy+=lh;};
         const hr=()=>{doc.setDrawColor(200,200,200);doc.setLineWidth(0.2);doc.line(m,sy-1,pageW-m,sy-1);sy+=1;};
-
-        setH(14,true);doc.setTextColor(30,30,30);
-        doc.text('Card Sheet Generator — Summary',m,sy);sy+=8;
-        hr();
-
-        setH(9,true);txt(`Set Prefix: ${currentPrefix}`);
-        setH(8);
-        txt(`Total front cards: ${frontCards.length}   With copies: ${expandedCards.length}   Back cards: ${slicedCards.filter(c=>c.isBackCard).length}`);
-        if(batchLabel)txt(`Batch label: ${batchLabel}`);
-        sy+=2;
-
+        setH(14,true);doc.setTextColor(30,30,30);doc.text('Card Sheet Generator — Summary',m,sy);sy+=8;hr();
+        setH(9,true);txt(`Set: ${currentPrefix}`);setH(8);
+        txt(`Front cards: ${frontCards.length}  With copies: ${expandedCards.length}  Back cards: ${slicedCards.filter(c=>c.isBackCard).length}`);
+        if(batchLabel)txt(`Batch: ${batchLabel}`);
+        txt(`Layout: ${lp.cols}×${lp.rows} cards/page · Margin ${lp.margin}mm · Gap ${lp.gap}mm · Mode: ${mode}`);sy+=2;
         if(currentScan){
-            setH(9,true);txt('Source Image');hr();
-            setH(8);
+            setH(9,true);txt('Source');hr();setH(8);
             txt(`File: ${currentScan.name}`,m,2);
-            txt(`Rotation: ${currentScan.rotation}°   Brightness: ${currentScan.brightness}%   Contrast: ${currentScan.contrast}%   Saturation: ${currentScan.saturation}%   Hue: ${currentScan.hue}°`,m,2);
-            txt(`Grid: ${currentScan.cols} cols × ${currentScan.rows} rows`,m,2);
-            txt(`Crop: L${currentScan.cropLeft} R${currentScan.cropRight} T${currentScan.cropTop} B${currentScan.cropBottom} px`,m,2);
-            sy+=2;
+            txt(`Grid: ${currentScan.cols}×${currentScan.rows}  Card: ${cardW}×${cardH}mm  Radius: ${radiusMM}mm`,m,2);sy+=2;
         }
-
-        setH(9,true);txt('Card Format');hr();
-        setH(8);
-        txt(`Size: ${currentScan?currentScan.cardWidthMM:63} mm × ${currentScan?currentScan.cardHeightMM:88} mm   Corner radius: ${radiusMM} mm`,m,2);
-        txt(`Tile padding: L${tilePad.left} R${tilePad.right} T${tilePad.top} B${tilePad.bottom} px`,m,2);
-        sy+=2;
-
-        setH(9,true);txt('Cards');hr();
-        setH(7);
-        const colW=(pageW-m*2)/2;
-        let col=0;const startSY=sy;
+        setH(9,true);txt('Cards');hr();setH(7);
+        const colW=(pageW-m*2)/2;let col=0;const startSY=sy;
         slicedCards.forEach((c,i)=>{
-            const hasTrim=c.trim&&(c.trim.l||c.trim.t||c.trim.r||c.trim.b);
-            const hasRot=c.trim&&c.trim.rot&&c.trim.rot!==0;
             const copies=(c.copies||1)>1?` ×${c.copies}`:'';
-            const trim=hasTrim?` [L${c.trim.l} R${c.trim.r} T${c.trim.t} B${c.trim.b}]`:'';
-            const rotStr=hasRot?` rot:${c.trim.rot}°`:'';
             const groupStr=c.groupId!=null?` [${GROUP_NAMES[c.groupId]}]`:'';
             const backStr=c.isBackCard?' [BACK]':'';
-            const line=`${String(i+1).padStart(3,'0')}. ${currentPrefix}_${c.suffix}${copies}${trim}${rotStr}${groupStr}${backStr}`;
             doc.setTextColor(60,60,60);doc.setFont('helvetica','normal');
-            doc.text(line,m+col*colW,sy,{maxWidth:colW-4});
-            sy+=4;
-            if(sy>pageH-m){col=1-col;sy=col===1?startSY:pageH-m+10;}
+            doc.text(`${String(i+1).padStart(3,'0')}. ${currentPrefix}_${c.suffix}${copies}${groupStr}${backStr}`,m+col*colW,sy,{maxWidth:colW-4});
+            sy+=4;if(sy>pageH-m){col=1-col;sy=col===1?startSY:pageH-m+10;}
         });
     }
 
     const pdfBlob=doc.output('blob');
     const blobUrl=URL.createObjectURL(pdfBlob);
     document.getElementById('pdf-preview-iframe').src=blobUrl;
-    // store for popup & download
-    window._lastPdfBlobUrl=blobUrl;
-    window._lastPdfBlob=pdfBlob;
-    // show View Preview button
-    const viewBtn=document.getElementById('pdf-view-btn');
-    viewBtn.classList.remove('hidden');
-    btn.textContent='Generate PDF Preview';btn.disabled=false;
-    // auto-open popup
+    window._lastPdfBlobUrl=blobUrl;window._lastPdfBlob=pdfBlob;
+    document.getElementById('pdf-view-btn').classList.remove('hidden');
+    btn.innerHTML=origTxt;btn.disabled=false;
     openPdfPopup();
+}
+
+/* ════ IMAGE EXPORT ════ */
+async function exportAsImages(){
+    if(slicedCards.length===0)return;
+    const btn=document.getElementById('img-export-btn');
+    btn.textContent='⏳ Rendering…';btn.disabled=true;
+
+    // Dynamically load JSZip if needed
+    if(!window.JSZip){
+        await new Promise((res,rej)=>{
+            const s=document.createElement('script');
+            s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+            s.onload=res;s.onerror=rej;document.head.appendChild(s);
+        });
+    }
+
+    const lp=getLayoutParams();
+    const {cardW,cardH,gap,showNames,namePad,showFooter,footerH,pageW,pageH,cols,rows,cardsPerPage,startX,startY}=lp;
+    const radiusMM=Math.max(0,parseFloat(document.getElementById('corner-radius-mm').value)||0);
+    const dpi=Math.max(72,Math.min(600,parseInt(document.getElementById('img-export-dpi').value)||300));
+    const fmt=document.getElementById('img-export-format').value;
+    const mode=document.querySelector('input[name="pdf-mode"]:checked')?.value||'both';
+    const batchLabel=document.getElementById('pdf-batch-label').value.trim();
+    const scale=dpi/25.4; // px per mm
+    const pxW=Math.round(pageW*scale),pxH=Math.round(pageH*scale);
+
+    const frontCards=slicedCards.filter(c=>!c.isBackCard);
+    const expandedCards=[];
+    frontCards.forEach(card=>{for(let c=0;c<(card.copies||1);c++)expandedCards.push(card);});
+
+    const zip=new JSZip();
+    const prefix=currentPrefix||'cards';
+    let fileIdx=0,cidx=0,pairIdx=0;
+
+    // Helper: draw one page to canvas, return blob
+    async function renderPage(pageCards,isBack){
+        const cvs=document.createElement('canvas');cvs.width=pxW;cvs.height=pxH;
+        const ctx=cvs.getContext('2d');
+        ctx.fillStyle='#ffffff';ctx.fillRect(0,0,pxW,pxH);
+
+        const r2p=v=>v*scale; // mm to px
+
+        for(let i=0;i<pageCards.length;i++){
+            const col=isBack?(cols-1-i%cols):i%cols;
+            const row=Math.floor(i/cols);
+            const x=r2p(startX+col*(cardW+gap));
+            const y=r2p(startY+row*(cardH+(showNames?namePad:0)+gap));
+            const w=r2p(cardW),h=r2p(cardH);
+
+            const url=isBack?resolveBackUrl(pageCards[i]):pageCards[i].dataUrl;
+            if(url){
+                await new Promise(res=>{
+                    const img=new Image();img.onload=()=>{
+                        ctx.save();ctx.beginPath();
+                        _roundRect(ctx,x,y,w,h,r2p(radiusMM||0));
+                        ctx.clip();ctx.drawImage(img,x,y,w,h);ctx.restore();
+                        drawCardBorderCanvas(ctx,x,y,w,h,r2p(radiusMM||0));
+                        res();
+                    };img.onerror=res;img.src=url;
+                });
+            } else {
+                ctx.fillStyle='#e2e8f0';ctx.beginPath();
+                _roundRect(ctx,x,y,w,h,r2p(radiusMM||0));ctx.fill();
+                drawCardBorderCanvas(ctx,x,y,w,h,r2p(radiusMM||0));
+            }
+
+            if(showNames&&!isBack){
+                const card=pageCards[i];
+                ctx.fillStyle='#64748b';
+                ctx.font=`${r2p(namePad*0.55)}px monospace`;ctx.textAlign='center';
+                ctx.fillText(`${currentPrefix}_${card.suffix}`,x+w/2,y+h+r2p(namePad*0.75),w);
+            }
+        }
+
+        if(showFooter){
+            const lbl=`${batchLabel||currentPrefix||'Set'}  ·  ${pageIndexLabel(pairIdx)}${isBack?' (Back)':''}`;
+            ctx.fillStyle='#94a3b8';ctx.font=`${r2p(4.5)}px sans-serif`;ctx.textAlign='center';
+            ctx.fillText(lbl,pxW/2,pxH-r2p(1.5));
+        }
+
+        return new Promise(res=>cvs.toBlob(res,`image/${fmt}`,fmt==='jpeg'?0.95:undefined));
+    }
+
+    while(cidx<expandedCards.length){
+        const pageCards=expandedCards.slice(cidx,cidx+cardsPerPage);
+        const idx=pageIndexLabel(pairIdx);
+
+        if(mode==='both'||mode==='front'){
+            const blob=await renderPage(pageCards,false);
+            zip.file(`${prefix}_${String(++fileIdx).padStart(3,'0')}_${idx}_front.${fmt==='jpeg'?'jpg':'png'}`,blob);
+        }
+        if(mode==='both'||mode==='back'){
+            const anyBack=pageCards.some(c=>resolveBackUrl(c));
+            if(anyBack){
+                const blob=await renderPage(pageCards,true);
+                zip.file(`${prefix}_${String(++fileIdx).padStart(3,'0')}_${idx}_back.${fmt==='jpeg'?'jpg':'png'}`,blob);
+            }
+        }
+
+        pairIdx++;cidx+=cardsPerPage;
+    }
+
+    const zipBlob=await zip.generateAsync({type:'blob'});
+    const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(zipBlob),download:`${prefix}_sheets_${dpi}dpi.zip`});
+    a.click();
+
+    btn.innerHTML=`<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Export Pages as Images`;
+    btn.disabled=false;
 }
 
 function openPdfPopup(){
@@ -2360,6 +2746,20 @@ function downloadPdf(){
     const prefix=currentPrefix||'cards';
     const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`${prefix}_sheet.pdf`});
     a.click();
+}
+
+/* ════ LOADING OVERLAY ════ */
+function showLoading(msg='Loading…',sub=''){
+    const el=document.getElementById('loading-overlay');
+    document.getElementById('loading-msg').textContent=msg;
+    document.getElementById('loading-sub').textContent=sub;
+    el.style.display='flex';
+}
+function hideLoading(){
+    document.getElementById('loading-overlay').style.display='none';
+}
+function updateLoadingSub(sub){
+    document.getElementById('loading-sub').textContent=sub;
 }
 
 /* ════ JSON SET EXPORT / IMPORT ════ */
@@ -2421,19 +2821,22 @@ function exportSetJSON(){
 async function importSetJSON(event){
     const file=event.target.files[0];if(!file)return;
     event.target.value='';
+    showLoading('Reading settings…','Parsing JSON');
+    await new Promise(r=>setTimeout(r,30));
+
     let payload;
     try{payload=JSON.parse(await file.text());}
-    catch(e){alert('Invalid JSON file.');return;}
-    if(!payload.cards){alert('Unrecognised format.');return;}
+    catch(e){hideLoading();alert('Invalid JSON file.');return;}
+    if(!payload.cards){hideLoading();alert('Unrecognised format.');return;}
 
     const {settings,cards}=payload;
-    const isV1=payload.version===1; // old format had dataUrls
+    const isV1=payload.version===1;
+
+    updateLoadingSub('Restoring settings…');
+    await new Promise(r=>setTimeout(r,20));
 
     // ── Restore settings ──
-    if(settings.prefix){
-        currentPrefix=settings.prefix;
-        const el=document.getElementById('prefix-input');if(el)el.value=currentPrefix;
-    }
+    if(settings.prefix){currentPrefix=settings.prefix;const el=document.getElementById('prefix-input');if(el)el.value=currentPrefix;}
     if(settings.tilePad){
         Object.assign(tilePad,settings.tilePad);
         ['left','right','top','bottom'].forEach(d=>{
@@ -2447,30 +2850,34 @@ async function importSetJSON(event){
     if(settings.pdfBatchLabel!=null)setEl('pdf-batch-label',settings.pdfBatchLabel);
     if(settings.pdfSummaryPage!=null)setEl('pdf-summary-page',settings.pdfSummaryPage);
     if(settings.useCardBack!=null){setEl('use-card-back',settings.useCardBack);toggleCardBackOptions();}
-    if(settings.backSource){
-        const r=document.querySelector(`input[name="back-source"][value="${settings.backSource}"]`);
-        if(r){r.checked=true;switchBackSource();}
-    }
+    if(settings.backSource){const r=document.querySelector(`input[name="back-source"][value="${settings.backSource}"]`);if(r){r.checked=true;switchBackSource();}}
+    if(settings.pdfMargin!=null)setEl('pdf-margin',settings.pdfMargin);
+    if(settings.pdfGap!=null)setEl('pdf-gap',settings.pdfGap);
+    if(settings.pdfNamePad!=null)setEl('pdf-name-pad',settings.pdfNamePad);
+    if(settings.pdfShowNames!=null)setEl('pdf-show-names',settings.pdfShowNames);
+    if(settings.pdfShowFooter!=null)setEl('pdf-show-footer',settings.pdfShowFooter);
+    if(settings.pdfMode){const r=document.querySelector(`input[name="pdf-mode"][value="${settings.pdfMode}"]`);if(r)r.checked=true;}
 
-    // ── v1 compat: had full dataUrls ──
+    // ── v1: had full dataUrls ──
     if(isV1){
+        showLoading('Importing cards…','Loading images from JSON');
+        await new Promise(r=>setTimeout(r,20));
         slicedCards=cards.map(c=>({
             id:c.id,idx:c.idx||1,suffix:c.suffix||'',copies:c.copies||1,
             groupId:c.groupId??undefined,isBackCard:c.isBackCard||false,
-            trim:c.trim||{l:0,t:0,r:0,b:0,rot:0},
-            dataUrl:c.dataUrl,originalDataUrl:c.dataUrl,
+            trim:c.trim||null,dataUrl:c.dataUrl,originalDataUrl:c.dataUrl,
             w:0,h:0,marginPx:0,offsetX:0,offsetY:0,
         }));
         renderReviewGrid();populateBackCardSelect();updateReviewBtn();
-        document.getElementById('review-modal').classList.add('open');
-        return;
+        document.getElementById('review-modal').classList.add('open');refreshLayoutPreview();
+        hideLoading();return;
     }
 
-    // ── v2: re-slice from current scan ──
+    // ── v2: re-slice from scan ──
     const sc=settings.scan;
-
-    // Apply saved scan params if a scan is loaded
     if(sc&&currentScan){
+        updateLoadingSub('Applying scan parameters…');
+        await new Promise(r=>setTimeout(r,20));
         ['cols','rows','rotation','cropLeft','cropRight','cropTop','cropBottom',
          'brightness','contrast','saturation','hue','cardWidthMM','cardHeightMM']
             .forEach(k=>{if(sc[k]!=null)currentScan[k]=sc[k];});
@@ -2479,90 +2886,479 @@ async function importSetJSON(event){
     }
 
     if(!currentScan){
-        // No scan loaded — restore metadata only, dataUrls will be missing (cards show broken img)
         slicedCards=cards.map(c=>({
             id:c.id,idx:c.idx||1,suffix:c.suffix||'',copies:c.copies||1,
             groupId:c.groupId??undefined,isBackCard:c.isBackCard||false,
-            trim:c.trim||{l:0,t:0,r:0,b:0,rot:0},
-            dataUrl:'',originalDataUrl:'',w:0,h:0,marginPx:0,offsetX:0,offsetY:0,
+            trim:c.trim||null,dataUrl:'',originalDataUrl:'',w:0,h:0,marginPx:0,offsetX:0,offsetY:0,
         }));
         renderReviewGrid();populateBackCardSelect();updateReviewBtn();
-        document.getElementById('review-modal').classList.add('open');
-        alert(`⚠️ Settings restored for ${cards.length} cards.\nNo scan image is loaded — please load the original scan to regenerate card images.`);
+        document.getElementById('review-modal').classList.add('open');refreshLayoutPreview();
+        hideLoading();
+        alert(`⚠️ Settings restored for ${cards.length} cards.\nNo scan loaded — please load the original scan to regenerate card images.`);
         return;
     }
 
-    // Re-slice every card from the scan using saved tile id + trim
+    // ── Slice cards ──
+    showLoading('Slicing cards…',`0 / ${cards.length}`);
+    await new Promise(r=>setTimeout(r,30));
     const src=getTransformedCanvas();
     const radiusMM=parseFloat(document.getElementById('corner-radius-mm').value)||0;
     slicedCards=[];
-    for(const c of cards){
-        const tileIdx=c.id; // tile index = grid position
-        const col=tileIdx%currentScan.cols, row=Math.floor(tileIdx/currentScan.cols);
-        if(col>=currentScan.cols||row>=currentScan.rows)continue; // safety
+
+    for(let ci=0;ci<cards.length;ci++){
+        const c=cards[ci];
+        if((ci+1)%6===0){updateLoadingSub(`Slicing ${ci+1} / ${cards.length}`);await new Promise(r=>setTimeout(r,0));}
+        const tileIdx=c.id;
+        const col=tileIdx%currentScan.cols,row=Math.floor(tileIdx/currentScan.cols);
+        if(col>=currentScan.cols||row>=currentScan.rows)continue;
         const s=sliceWithMargin(src,col,row,currentScan,radiusMM);
-        const card={
+        slicedCards.push({
             id:tileIdx,idx:c.idx||1,
-            suffix:c.suffix||String(c.idx).padStart(3,'0'),
+            suffix:c.suffix||String(c.idx||ci+1).padStart(3,'0'),
             name:`${currentPrefix}_${c.suffix}`,
-            copies:c.copies||1,
-            groupId:c.groupId??undefined,
+            copies:c.copies||1,groupId:c.groupId??undefined,
             isBackCard:c.isBackCard||false,
-            trim:c.trim||{l:0,t:0,r:0,b:0,rot:0},
+            trim:c.trim||null,
             dataUrl:s.dataUrl,originalDataUrl:s.originalDataUrl,
             w:s.w,h:s.h,marginPx:s.marginPx,offsetX:s.offsetX,offsetY:s.offsetY,
-        };
-        // Re-apply saved trim if non-zero
-        if(c.trim&&(c.trim.l||c.trim.t||c.trim.r||c.trim.b||c.trim.rot)){
-            const trimmed=applyTrimToCard(card);
-            if(trimmed)card.dataUrl=trimmed;
+        });
+    }
+
+    // ── Apply saved transforms per card ──
+    const cardsWithTrim=slicedCards.filter(c=>c.trim&&(c.trim.l||c.trim.t||c.trim.r||c.trim.b||c.trim.rot));
+    if(cardsWithTrim.length>0){
+        showLoading('Applying card transforms…',`0 / ${cardsWithTrim.length}`);
+        await new Promise(r=>setTimeout(r,20));
+        for(let ti=0;ti<cardsWithTrim.length;ti++){
+            if(ti%3===0){updateLoadingSub(`Card ${ti+1} / ${cardsWithTrim.length}`);await new Promise(r=>setTimeout(r,0));}
+            await applyCardTrimAsync(cardsWithTrim[ti]);
         }
-        slicedCards.push(card);
     }
 
     renderReviewGrid();populateBackCardSelect();updateReviewBtn();
-
-    // Restore back-card-select
     if(settings.backCardSelectTileId!=null){
         const sel=document.getElementById('back-card-select');
         if(sel){sel.value=settings.backCardSelectTileId;previewBackFromSet();}
     }
-
-    document.getElementById('review-modal').classList.add('open');
-    const backCardCount=slicedCards.filter(c=>c.isBackCard).length;
-    console.log(`✅ Imported ${slicedCards.length} cards (${backCardCount} back cards) from "${file.name}".`);
+    document.getElementById('review-modal').classList.add('open');refreshLayoutPreview();
+    hideLoading();
 }
 
-// Helper: apply trim to a card's dataUrl, returns new dataUrl or null
-function applyTrimToCard(card){
-    try{
-        const img=new Image();
-        img.src=card.originalDataUrl;
-        if(!img.complete||img.naturalWidth===0)return null;
-        const t=card.trim;
-        const ox=card.offsetX,oy=card.offsetY,cw=card.w,ch=card.h;
-        const sl=Math.round(t.l*cw/100),st=Math.round(t.t*ch/100),
-              sr=Math.round(t.r*cw/100),sb=Math.round(t.b*ch/100);
-        const nw=cw-sl-sr,nh=ch-st-sb;
-        if(nw<1||nh<1)return null;
-        const off=document.createElement('canvas');off.width=nw;off.height=nh;
-        const ctx=off.getContext('2d');
-        if(t.rot){
-            ctx.save();ctx.translate(nw/2,nh/2);ctx.rotate(t.rot*Math.PI/180);ctx.translate(-nw/2,-nh/2);
-        }
-        ctx.drawImage(img,ox+sl,oy+st,nw,nh,0,0,nw,nh);
-        if(t.rot)ctx.restore();
-        return off.toDataURL('image/png');
-    }catch(e){return null;}
+function getBorderParams(){
+    const on=document.getElementById('card-border-on')?.checked;
+    if(!on)return null;
+    const color=document.getElementById('card-border-color')?.value||'#000000';
+    const width=parseFloat(document.getElementById('card-border-width')?.value)||1;
+    return {color,width};
 }
 
 function addRoundedCardToPDF(doc,url,x,y,w,h,r){
     const fmt=url.includes('jpeg')||url.includes('JPEG')?'JPEG':'PNG';
-    if(r>0.3){doc.saveGraphicsState();doc.roundedRect(x,y,w,h,r,r);doc.clip();doc.addImage(url,fmt,x,y,w,h);doc.restoreGraphicsState();}
-    else{doc.addImage(url,fmt,x,y,w,h);}
+    const bp=getBorderParams();
+
+    if(r>0.3){
+        // Clip via a pre-rendered canvas to avoid jsPDF cumulative clip bug
+        try{
+            const scale=4; // render at 4x for quality
+            const cvs=document.createElement('canvas');
+            cvs.width=Math.round(w*scale);cvs.height=Math.round(h*scale);
+            const ctx=cvs.getContext('2d');
+            const rPx=r*scale;
+            // clip path
+            ctx.beginPath();
+            ctx.moveTo(rPx,0);ctx.lineTo(cvs.width-rPx,0);ctx.quadraticCurveTo(cvs.width,0,cvs.width,rPx);
+            ctx.lineTo(cvs.width,cvs.height-rPx);ctx.quadraticCurveTo(cvs.width,cvs.height,cvs.width-rPx,cvs.height);
+            ctx.lineTo(rPx,cvs.height);ctx.quadraticCurveTo(0,cvs.height,0,cvs.height-rPx);
+            ctx.lineTo(0,rPx);ctx.quadraticCurveTo(0,0,rPx,0);ctx.closePath();
+            ctx.clip();
+            // draw card image
+            const img=new Image();img.src=url;
+            ctx.drawImage(img,0,0,cvs.width,cvs.height);
+            // border inside clip
+            if(bp){
+                const bwPx=bp.width*scale*0.264583;
+                ctx.strokeStyle=bp.color;ctx.lineWidth=bwPx;
+                ctx.beginPath();
+                const rr=Math.max(0,rPx-bwPx/2);
+                ctx.moveTo(rr,bwPx/2);ctx.lineTo(cvs.width-rr,bwPx/2);ctx.quadraticCurveTo(cvs.width-bwPx/2,bwPx/2,cvs.width-bwPx/2,rr);
+                ctx.lineTo(cvs.width-bwPx/2,cvs.height-rr);ctx.quadraticCurveTo(cvs.width-bwPx/2,cvs.height-bwPx/2,cvs.width-rr,cvs.height-bwPx/2);
+                ctx.lineTo(rr,cvs.height-bwPx/2);ctx.quadraticCurveTo(bwPx/2,cvs.height-bwPx/2,bwPx/2,cvs.height-rr);
+                ctx.lineTo(bwPx/2,rr);ctx.quadraticCurveTo(bwPx/2,bwPx/2,rr,bwPx/2);ctx.closePath();
+                ctx.stroke();
+            }
+            doc.addImage(cvs.toDataURL('image/png'),'PNG',x,y,w,h);
+        }catch(e){
+            doc.addImage(url,fmt,x,y,w,h);
+        }
+    } else {
+        doc.addImage(url,fmt,x,y,w,h);
+        if(bp){
+            const bw=bp.width*0.264583;
+            const hex=bp.color;
+            const ri=parseInt(hex.slice(1,3),16),gi=parseInt(hex.slice(3,5),16),bi=parseInt(hex.slice(5,7),16);
+            doc.setDrawColor(ri,gi,bi);doc.setLineWidth(bw);
+            doc.rect(x,y,w,h,'S');
+        }
+    }
 }
 
-window.onload=()=>console.log('%c✅ Card Sheet Generator ready','color:#22c55e;font-weight:bold');
+// Draw border on canvas context (for image export)
+function drawCardBorderCanvas(ctx,x,y,w,h,r){
+    const bp=getBorderParams();if(!bp)return;
+    ctx.save();
+    ctx.strokeStyle=bp.color;ctx.lineWidth=bp.width;
+    ctx.beginPath();
+    if(r>0){_roundRect(ctx,x+bp.width/2,y+bp.width/2,w-bp.width,h-bp.width,Math.max(0,r-bp.width/2));}
+    else{ctx.rect(x+bp.width/2,y+bp.width/2,w-bp.width,h-bp.width);}
+    ctx.stroke();ctx.restore();
+}
+
+/* ════ EDIT TAB SWITCHING ════ */
+function switchEditTab(tab){
+    const isCrop=tab==='crop';
+    document.getElementById('edit-panel-crop').classList.toggle('hidden',!isCrop);
+    document.getElementById('edit-panel-paint').classList.toggle('hidden',isCrop);
+    const pl=document.getElementById('paint-layer');
+    const hit=document.getElementById('paint-hit');
+    pl.style.display=isCrop?'none':'block';
+    hit.style.display=isCrop?'none':'block';
+    document.getElementById('paint-cursor').style.display=isCrop?'none':'none'; // shown on hover
+    document.getElementById('edit-tab-crop').className='px-3 py-1.5 text-xs font-semibold transition-colors '+(isCrop?'bg-blue-600 text-white':'bg-slate-800 text-slate-400 hover:bg-slate-700');
+    document.getElementById('edit-tab-paint').className='px-3 py-1.5 text-xs font-semibold transition-colors '+(!isCrop?'bg-blue-600 text-white':'bg-slate-800 text-slate-400 hover:bg-slate-700');
+    document.getElementById('edit-hint-text').textContent=isCrop?'Scroll to zoom · Drag to pan':'Paint on card · scroll to zoom · right-drag to pan';
+    if(!isCrop){_initPaintLayer();_initPaintHitEvents();}
+    else{_hidePaintCursor();}
+}
+
+/* ════ PAINT TOOL ════ */
+let _paintTool='brush';
+let _paintHistory=[];
+let _paintHitInited=false;
+let _paintIsDrawing=false;
+let _paintLastCard={x:0,y:0}; // coords in card-layer space
+let _paintLastUsed=[];
+let _airbrushTimer=null;
+
+function setPaintTool(tool){
+    _paintTool=tool;
+    ['brush','airbrush','eyedropper','eraser'].forEach(t=>{
+        const btn=document.getElementById(`paint-tool-${t}`);
+        if(btn)btn.className=btn.className.replace(/bg-blue-600 text-white|bg-slate-700 text-slate-300 hover:bg-slate-600/g,'').trim()
+            +' '+(t===tool?'bg-blue-600 text-white':'bg-slate-700 text-slate-300 hover:bg-slate-600');
+    });
+    document.getElementById('paint-flow-row').style.display=tool==='airbrush'?'block':'none';
+    const cur=document.getElementById('paint-cursor');
+    if(cur)cur.style.border=tool==='eraser'?'1.5px dashed rgba(255,100,100,0.9)':'1.5px solid rgba(255,255,255,0.9)';
+}
+
+function paintAddLastUsed(color){
+    _paintLastUsed=_paintLastUsed.filter(c=>c!==color);
+    _paintLastUsed.unshift(color);
+    if(_paintLastUsed.length>10)_paintLastUsed.pop();
+    _renderLastUsed();
+}
+function _renderLastUsed(){
+    const container=document.getElementById('paint-last-used');
+    container.innerHTML='';
+    _paintLastUsed.forEach(col=>{
+        const btn=document.createElement('button');
+        btn.style.cssText=`width:18px;height:18px;background:${col};border-radius:4px;border:1.5px solid rgba(255,255,255,.25);cursor:pointer;flex-shrink:0;`;
+        btn.title=col;
+        btn.onclick=()=>{
+            document.getElementById('paint-color').value=col;
+            document.getElementById('paint-color-preview').style.background=col;
+        };
+        container.appendChild(btn);
+    });
+}
+
+// The paint layer canvas has the same pixel dimensions as the card (effW x effH)
+// Its position/transform is synced with the edit canvas via editApplyTransform
+function _initPaintLayer(){
+    const card=slicedCards.find(sc=>sc.id===editingCardId);if(!card)return;
+    const l=parseInt(document.getElementById('e-crop-l').value)||0;
+    const t=parseInt(document.getElementById('e-crop-t').value)||0;
+    const r=parseInt(document.getElementById('e-crop-r').value)||0;
+    const b=parseInt(document.getElementById('e-crop-b').value)||0;
+    const effW=Math.max(1,card.w-l-r),effH=Math.max(1,card.h-t-b);
+    const ox=(card.offsetX||0)+l,oy=(card.offsetY||0)+t;
+
+    const pl=document.getElementById('paint-layer');
+    // Only reset if opening fresh (not switching back after pan)
+    if(pl.dataset.cardId!==String(editingCardId)||pl.dataset.effW!==String(effW)||pl.dataset.effH!==String(effH)){
+        pl.width=effW;pl.height=effH;
+        pl.dataset.cardId=editingCardId;
+        pl.dataset.effW=effW;pl.dataset.effH=effH;
+        pl.dataset.ox=ox;pl.dataset.oy=oy;
+        _paintHistory=[];
+        _pushPaintSnapshot();
+    }
+
+    // Position the layer at the card's visible area within the edit canvas coordinate space
+    // The edit canvas is the oversized image; card starts at (ox, oy) within it
+    pl.style.left=ox+'px';pl.style.top=oy+'px';
+    pl.style.width=effW+'px';pl.style.height=effH+'px';
+    pl.style.transform=`translate(${ePanX}px,${ePanY}px) scale(${eZoom})`;
+    // transform-origin must match edit-canvas (top-left of the oversized canvas, shifted by ox/oy)
+    pl.style.transformOrigin='0 0';
+    // Re-apply transform accounting for the offset
+    _syncPaintLayerTransform();
+}
+
+function _syncPaintLayerTransform(){
+    const pl=document.getElementById('paint-layer');if(!pl||pl.style.display==='none')return;
+    const ox=parseFloat(pl.dataset.ox)||0,oy=parseFloat(pl.dataset.oy)||0;
+    // The edit canvas is positioned at (ePanX, ePanY) scaled by eZoom from top-left of wrap
+    // The layer sits at (ox, oy) within the edit-canvas logical space
+    const tx=ePanX+ox*eZoom,ty=ePanY+oy*eZoom;
+    pl.style.transform=`translate(${tx}px,${ty}px) scale(${eZoom})`;
+    pl.style.transformOrigin='0 0';
+    pl.style.left='0';pl.style.top='0';
+}
+
+// Override editApplyTransform to also sync paint layer
+const _origEditApplyTransform=window.editApplyTransform;
+function editApplyTransform(){
+    const c=document.getElementById('edit-canvas');
+    c.style.transform=`translate(${ePanX}px,${ePanY}px) scale(${eZoom})`;
+    const h=document.getElementById('edit-crop-handles');
+    if(h)h.style.transform=`translate(${ePanX}px,${ePanY}px) scale(${eZoom})`;
+    _syncPaintLayerTransform();
+}
+
+function _pushPaintSnapshot(){
+    const pl=document.getElementById('paint-layer');
+    if(!pl||!pl.width)return;
+    const ctx=pl.getContext('2d');
+    _paintHistory.push(ctx.getImageData(0,0,pl.width,pl.height));
+    if(_paintHistory.length>40)_paintHistory.shift();
+}
+
+// Convert screen coords to paint-layer canvas coords
+function _screenToLayer(clientX,clientY){
+    const pl=document.getElementById('paint-layer');
+    const ox=parseFloat(pl.dataset.ox)||0,oy=parseFloat(pl.dataset.oy)||0;
+    const wrap=document.getElementById('edit-canvas-wrap');
+    const rect=wrap.getBoundingClientRect();
+    // mouse pos relative to wrap, then inverse pan/zoom, then subtract layer offset
+    const lx=(clientX-rect.left-ePanX)/eZoom - ox;
+    const ly=(clientY-rect.top-ePanY)/eZoom - oy;
+    return {x:lx,y:ly};
+}
+
+function _paintAtLayer(x,y){
+    const pl=document.getElementById('paint-layer');if(!pl)return;
+    const ctx=pl.getContext('2d');
+    const size=parseInt(document.getElementById('paint-size').value)||20;
+    const opacity=(parseInt(document.getElementById('paint-opacity').value)||80)/100;
+    const color=document.getElementById('paint-color').value;
+
+    if(_paintTool==='eraser'){
+        ctx.save();ctx.globalCompositeOperation='destination-out';
+        ctx.beginPath();ctx.arc(x,y,size/2,0,Math.PI*2);
+        ctx.fillStyle=`rgba(0,0,0,${opacity})`;ctx.fill();ctx.restore();
+    } else if(_paintTool==='brush'){
+        ctx.save();ctx.globalAlpha=opacity;ctx.globalCompositeOperation='source-over';
+        ctx.beginPath();ctx.arc(x,y,size/2,0,Math.PI*2);
+        ctx.fillStyle=color;ctx.fill();ctx.restore();
+    } else if(_paintTool==='airbrush'){
+        const flow=(parseInt(document.getElementById('paint-flow').value)||8)/100;
+        const color=document.getElementById('paint-color').value;
+        // Parse hex to rgb for transparent stop (avoids grey fringe from rgba(255,255,255,0))
+        const r2=parseInt(color.slice(1,3),16),g2=parseInt(color.slice(3,5),16),b2=parseInt(color.slice(5,7),16);
+        const grad=ctx.createRadialGradient(x,y,0,x,y,size/2);
+        grad.addColorStop(0,`rgba(${r2},${g2},${b2},${flow*opacity})`);
+        grad.addColorStop(1,`rgba(${r2},${g2},${b2},0)`);
+        ctx.save();ctx.globalCompositeOperation='source-over';
+        ctx.beginPath();ctx.arc(x,y,size/2,0,Math.PI*2);
+        ctx.fillStyle=grad;ctx.fill();ctx.restore();
+    }
+}
+
+function _paintLineLayer(x0,y0,x1,y1){
+    const dist=Math.hypot(x1-x0,y1-y0);
+    const steps=Math.max(1,Math.round(dist*2));
+    for(let i=0;i<=steps;i++){const t=i/steps;_paintAtLayer(x0+(x1-x0)*t,y0+(y1-y0)*t);}
+}
+
+function updatePaintCursor(){
+    const cur=document.getElementById('paint-cursor');if(!cur)return;
+    const size=parseInt(document.getElementById('paint-size').value)||20;
+    const screenSize=size*eZoom;
+    cur.style.width=screenSize+'px';cur.style.height=screenSize+'px';
+}
+function _showPaintCursor(clientX,clientY){
+    const cur=document.getElementById('paint-cursor');
+    cur.style.display='block';cur.style.left=clientX+'px';cur.style.top=clientY+'px';
+    updatePaintCursor();
+}
+function _hidePaintCursor(){
+    const cur=document.getElementById('paint-cursor');if(cur)cur.style.display='none';
+}
+
+function _initPaintHitEvents(){
+    if(_paintHitInited)return;_paintHitInited=true;
+    const hit=document.getElementById('paint-hit');
+    const wrap=document.getElementById('edit-canvas-wrap');
+
+    // Right-drag pans (same as edit canvas pan behaviour)
+    let _rightDrag=false,_rdLastX=0,_rdLastY=0;
+
+    const getXY=e=>e.touches?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};
+
+    hit.addEventListener('contextmenu',e=>e.preventDefault());
+
+    hit.addEventListener('mousedown',e=>{
+        if(e.button===2){_rightDrag=true;_rdLastX=e.clientX;_rdLastY=e.clientY;return;}
+        e.preventDefault();
+
+        // Eyedropper: sample from the edit canvas
+        if(_paintTool==='eyedropper'){
+            const ecvs=document.getElementById('edit-canvas');
+            const wrap=document.getElementById('edit-canvas-wrap');
+            const rect=wrap.getBoundingClientRect();
+            const lx=(e.clientX-rect.left-ePanX)/eZoom;
+            const ly=(e.clientY-rect.top-ePanY)/eZoom;
+            const px=Math.round(lx),py=Math.round(ly);
+            if(px>=0&&py>=0&&px<ecvs.width&&py<ecvs.height){
+                const ctx=ecvs.getContext('2d');
+                const d=ctx.getImageData(px,py,1,1).data;
+                const hex='#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('');
+                document.getElementById('paint-color').value=hex;
+                document.getElementById('paint-color-preview').style.background=hex;
+                paintAddLastUsed(hex);
+            }
+            // Switch back to brush after picking
+            setPaintTool('brush');
+            return;
+        }
+
+        const pos=_screenToLayer(e.clientX,e.clientY);
+        _paintLastCard=pos;
+        _paintAtLayer(pos.x,pos.y);
+        _paintIsDrawing=true;
+        if(_paintTool==='airbrush'){
+            _airbrushTimer=setInterval(()=>{_paintAtLayer(_paintLastCard.x,_paintLastCard.y);},30);
+        }
+        if(_paintTool!=='eraser')paintAddLastUsed(document.getElementById('paint-color').value);
+    });
+
+    // Ctrl+Z undo (only when paint panel active)
+    if(!hit._ctrlzInited){
+        hit._ctrlzInited=true;
+        document.addEventListener('keydown',e=>{
+            if((e.ctrlKey||e.metaKey)&&e.key==='z'&&document.getElementById('paint-hit')?.style.display==='block'){
+                e.preventDefault();undoPaint();
+            }
+        });
+    }
+
+    hit.addEventListener('mousemove',e=>{
+        // Show correct cursor for eyedropper (no brush circle)
+        if(_paintTool==='eyedropper'){
+            _hidePaintCursor();
+            hit.style.cursor='crosshair';
+        } else {
+            _showPaintCursor(e.clientX,e.clientY);
+            hit.style.cursor='none';
+        }
+        if(_rightDrag){
+            ePanX+=e.clientX-_rdLastX;ePanY+=e.clientY-_rdLastY;
+            _rdLastX=e.clientX;_rdLastY=e.clientY;
+            editApplyTransform();return;
+        }
+        if(!_paintIsDrawing)return;
+        const pos=_screenToLayer(e.clientX,e.clientY);
+        _paintLineLayer(_paintLastCard.x,_paintLastCard.y,pos.x,pos.y);
+        _paintLastCard=pos;
+    });
+
+    const stopDraw=e=>{
+        if(_paintIsDrawing)_pushPaintSnapshot(); // save state after stroke
+        _paintIsDrawing=false;_rightDrag=false;
+        clearInterval(_airbrushTimer);_airbrushTimer=null;
+    };
+    hit.addEventListener('mouseup',stopDraw);
+    hit.addEventListener('mouseleave',e=>{stopDraw(e);_hidePaintCursor();});
+
+    // Scroll = zoom (pass to wrap)
+    hit.addEventListener('wheel',e=>{e.stopPropagation();editZoomWheel(e);updatePaintCursor();},{passive:false});
+
+    // Touch
+    hit.addEventListener('touchstart',e=>{
+        e.preventDefault();
+        const pos=_screenToLayer(e.touches[0].clientX,e.touches[0].clientY);
+        _paintLastCard=pos;_paintAtLayer(pos.x,pos.y);_paintIsDrawing=true;
+    },{passive:false});
+    hit.addEventListener('touchmove',e=>{
+        e.preventDefault();
+        const pos=_screenToLayer(e.touches[0].clientX,e.touches[0].clientY);
+        _paintLineLayer(_paintLastCard.x,_paintLastCard.y,pos.x,pos.y);_paintLastCard=pos;
+    },{passive:false});
+    hit.addEventListener('touchend',stopDraw);
+}
+
+function undoPaint(){
+    if(_paintHistory.length<=1)return;
+    _paintHistory.pop();
+    const pl=document.getElementById('paint-layer');
+    pl.getContext('2d').putImageData(_paintHistory[_paintHistory.length-1],0,0);
+}
+
+function resetPaint(){
+    const pl=document.getElementById('paint-layer');if(!pl)return;
+    pl.getContext('2d').clearRect(0,0,pl.width,pl.height);
+    _paintHistory=[];_pushPaintSnapshot();
+}
+
+function savePaint(){
+    const card=slicedCards.find(sc=>sc.id===editingCardId);if(!card)return;
+    const pl=document.getElementById('paint-layer');if(!pl||!pl.width)return;
+
+    const l=parseInt(document.getElementById('e-crop-l').value)||0;
+    const t=parseInt(document.getElementById('e-crop-t').value)||0;
+    const r=parseInt(document.getElementById('e-crop-r').value)||0;
+    const b=parseInt(document.getElementById('e-crop-b').value)||0;
+    const effW=Math.max(1,card.w-l-r),effH=Math.max(1,card.h-t-b);
+    const ox=(card.offsetX||0)+l,oy=(card.offsetY||0)+t;
+
+    // Composite: draw card image first, then paint layer on top
+    const out=document.createElement('canvas');out.width=effW;out.height=effH;
+    const octx=out.getContext('2d');
+
+    const img=new Image();
+    img.onload=()=>{
+        // Draw card (from originalDataUrl, cropped to visible area)
+        const rot=parseFloat(document.getElementById('e-rot').value)||0;
+        if(rot!==0){
+            octx.save();octx.translate(effW/2,effH/2);octx.rotate(rot*Math.PI/180);octx.translate(-card.w/2,-card.h/2);
+            octx.drawImage(img,-(card.offsetX||0),-(card.offsetY||0));octx.restore();
+        } else {
+            octx.drawImage(img,-ox,-oy);
+        }
+        // Paint layer on top (already card-sized)
+        octx.drawImage(pl,0,0);
+
+        card.dataUrl=out.toDataURL('image/png');
+        // Bake into originalDataUrl: rebuild oversized with paint merged
+        const baked=document.createElement('canvas');
+        baked.width=img.naturalWidth;baked.height=img.naturalHeight;
+        const bctx=baked.getContext('2d');
+        bctx.drawImage(img,0,0);
+        bctx.drawImage(pl,ox,oy);
+        card.originalDataUrl=baked.toDataURL('image/png');
+        card.offsetX=ox;card.offsetY=oy;card.w=effW;card.h=effH;card.trim={l,t,r,b,rot};
+
+        renderReviewGrid();
+        // Reset paint layer for next time
+        pl.dataset.cardId='';
+        switchEditTab('crop');
+        updateEditCanvas();
+    };
+    img.src=card.originalDataUrl;
+}
+
+window.onload=()=>{};
 </script>
 </body>
 </html>
