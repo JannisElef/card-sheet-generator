@@ -12,11 +12,24 @@ permissions:
 
 jobs:
   webready:
-    uses: JannisElef/webready-images-workflow/.github/workflows/webready-images.yml@v1
+    uses: JannisElef/webready-images-workflow/.github/workflows/webready-images.yml@v2
     with:
       source-dir: assets/img
+
       output-dir: assets/img/web
       quality: 80
       suffix: -web
-      max-width: 1280
-      max-height: 1280
+      max-width: 1024
+      max-height: 1024
+
+      generate-smaller: true
+      smaller-quality: 65
+      smaller-suffix: -smaller
+      smaller-max-width: 512
+      smaller-max-height: 512
+
+      generate-webp: true
+      webp-quality: 78
+      webp-suffix: -webp
+      webp-max-width: 1024
+      webp-max-height: 1024
